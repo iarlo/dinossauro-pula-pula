@@ -21,4 +21,4 @@ Cenario.desenharObstaculo = (ctx) => (tamanho) => (posicao) => {
     ctx.fillStyle = "black";
     ctx.fillRect(posicao.x, posicao.y, tamanho.x, tamanho.y);
 };
-Cenario.criarObstaculo = (semente) => (index) => (diminuir) => ({ x: index * (semente + window.innerWidth / 100) - diminuir, y: window.innerHeight / 2 });
+Cenario.criarObstaculo = (semente) => (index) => (diminuir) => ({ x: index / 2 * (semente + 200), y: window.innerHeight / 2 });

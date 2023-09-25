@@ -49,12 +49,12 @@ const criarFase = (ctx) => (estado) => (cenario) => (jogador) => {
 
     // Mapeia os obstáculos para serem impressos e retorna uma nova posição para eles
     estado.obstaculos = estado.obstaculos.map((valor, index) => {
-        cenario.desenharObstaculo(ctx)({ x: 25, y: 50 })({ x: valor.x * 2, y: valor.y });
-        return { ...valor, x: valor.x - window.innerWidth / 1000 };
+        cenario.desenharObstaculo(ctx)({ x: 25, y: 50 })({ x: valor.x * estado.velocidadeInicial, y: valor.y });
+        return { ...valor, x: valor.x - 1 };
     });
 
-    jogador.pular(75); // Define a altura do pulo
-    jogador.desenhar(ctx)(jogador.posicao)({ x: 25, y: 25 }); // Imprimir jogador
+    jogador.pular(125); // Define a altura do pulo
+    jogador.desenhar(ctx)(jogador.posicao)(jogador.tamanho); // Imprimir jogador
     
      // Preparar texto de pontuação
     const pontuacao = cenario.formatarTexto(ctx)(16)("right")("black");
@@ -70,18 +70,19 @@ const carregarTelaInicial = () => execFuncoes(TELA_INICIAL);
 const carregarFase = () => execFuncoes(JOGO);
 
 window.addEventListener("keydown", (e) => { 
-    if (e.code != "Space")  return;
+    if (e.code != "Space" || Estado.faseAtual == -1 || Jogador.estaEmAnimacao || Jogador.estaPulando)  return;
     if (Estado.faseAtual == 0) Estado.faseAtual = 1;
-    if (Jogador.estaEmAnimacao || Jogador.estaPulando) return;
-    Jogador.estaPulando = true;
+    else Jogador.estaPulando = true;
 }, false); // Evento de quando pressionada a tecla espaço. Caso esteja no menu, o jogo será iniciado; Caso esteja no jogo, a ação pular será chamada
 
 window.addEventListener("resize", () => {
     Estado.faseAtual = 0;
-    Estado.obstaculos = [];
+    Jogador.yInicial = Jogador.resetarYInicial();
+    Estado.limparObstaculos();
 }, false); // Quando redimensionado, o cenário deve ser recarregado para evitar erros
 
 const loopJogo = (tempo) => {
+    if (Estado.faseAtual == -1) Estado.faseAtual = 0;
     if (Estado.faseAtual > 0) Estado.pontuacao = Cenario.moverCoordenadas({ x: 1, y: 0 })({ x: Estado.pontuacao, y: 0 }).x;
     carregarTelaInicial();
     carregarFase();
