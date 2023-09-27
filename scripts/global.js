@@ -34,6 +34,7 @@ const criarMenu = (ctx) => (logo) => (cenario) => {
 const criarFase = (ctx) => (estado) => (cenario) => (jogador) => {
     if (estado.faseAtual < 1) return;
     if (estado.obstaculos.length === 0) estado.obstaculos = Array(5).fill().map((valor, index) => cenario.criarObstaculo((estado.semente() + 1) * 200)(index)(window.innerWidth));
+    if (estado.habilidades.length === 0) estado.habilidades = Array(1).fill().map((valor, index) => cenario.criarObstaculo((estado.semente() + 1) * 500)(2)(window.innerWidth));
     
     // Caso o primeiro obstáculo da lista esteja fora da tela, remover da lista e criar um novo
     if (estado.obstaculos[0].x < 0) {
@@ -41,6 +42,11 @@ const criarFase = (ctx) => (estado) => (cenario) => (jogador) => {
         estado.obstaculos.push(cenario.criarObstaculo((estado.semente() + 1) * 200)(4)(0));
     };
 
+    // Caso a primeira habilidade da lista esteja fora da tela, remover da lista e criar uma nova
+    if (estado.habilidades[0].x < 0) {
+        estado.habilidades = estado.habilidades.slice(1);
+        estado.habilidades.push(cenario.criarObstaculo((estado.semente() + 1) * 200)(5)(0));
+    }
     // Define o tamanho do canvas
     ctx.canvas.width = window.innerWidth;
     ctx.canvas.height = window.innerHeight;
@@ -50,6 +56,12 @@ const criarFase = (ctx) => (estado) => (cenario) => (jogador) => {
     // Mapeia os obstáculos para serem impressos e retorna uma nova posição para eles
     estado.obstaculos = estado.obstaculos.map((valor, index) => {
         cenario.desenharObstaculo(ctx)({ x: 25, y: 50 })({ x: valor.x * estado.velocidadeInicial, y: valor.y });
+        return { ...valor, x: valor.x - 1 };
+    });
+
+    // Mapeia as habilidades para serem impressos e retorna uma nova posição para elas
+    estado.habilidades = estado.habilidades.map((valor, index) => {
+        cenario.desenharHabilidade(ctx)({ x: 25, y: 25 })({ x: valor.x * estado.velocidadeInicial, y: valor.y });
         return { ...valor, x: valor.x - 1 };
     });
 

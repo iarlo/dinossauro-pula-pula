@@ -17,6 +17,10 @@ Cenario.formatarTexto = (ctx) => (tamanho) => (align) => (cor) => {
     ctx.font = `${tamanho}px arial`;
     return ctx;
 };
+Cenario.desenharHabilidade = (ctx) => (tamanho) => (posicao) => {
+    ctx.fillStyle = "red";
+    ctx.fillRect(posicao.x, posicao.y, tamanho.x, tamanho.y);
+};
 Cenario.desenharObstaculo = (ctx) => (tamanho) => (posicao) => {
     ctx.fillStyle = "black";
     ctx.fillRect(posicao.x, posicao.y, tamanho.x, tamanho.y);
