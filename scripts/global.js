@@ -81,6 +81,35 @@ window.addEventListener("resize", () => {
     Estado.limparObstaculos();
 }, false); // Quando redimensionado, o cenário deve ser recarregado para evitar erros
 
+/*
+const checagemMorte = setInterval(() =>{
+
+    const obstaculoPosition = obstaculo.offsetLeft;
+    const jogadorPosition = +window.getComputedStyle(jogador).bottom.replace("px", "")
+
+    if(obstaculoPosition <= 150 && obstaculoPosition > 0 && jogadorosition < 80){
+        //No caso aqui acabaria com a animação do obstaculo e do jogador
+        obstaculo.style.animation = "none";
+        obstaculo.style.left = `${obstaculoPosition}px`;
+
+        jogador.style.animation = "none";
+        jogador.style.bottom = `${jogadorPosition}px`;
+
+        //jogador.src = IMAGEM DO DINOSSAURO APOS COLISAO
+        jogador.style.width = "50px";
+        jogador.style.marginLeft = "50px";
+
+        clearInterval(checagemMorte)
+
+    }
+
+}, 10);*/
+//Aqui é o código para criar a colisão, nele é preciso fazer a checagem num intervalo de 10ms para ver se o jogador e o obstáculo 
+//se tocam, e daí encerrar as animações e dar o alerta de fim do jogo.
+
+//Essa parte de criar a colisão eu entendi como faz e tals, mas eu preciso de ajuda para fazer se encaixar nas arrays.
+//queria saber como faz, para conectar isso com o restante do código.
+
 const loopJogo = (tempo) => {
     if (Estado.faseAtual == -1) Estado.faseAtual = 0;
     if (Estado.faseAtual > 0) Estado.pontuacao = Cenario.moverCoordenadas({ x: 1, y: 0 })({ x: Estado.pontuacao, y: 0 }).x;
