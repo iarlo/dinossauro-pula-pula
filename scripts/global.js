@@ -111,61 +111,58 @@ window.addEventListener("resize", () => {
     Estado.limparObstaculos();
 }, false);
 
-/*
-const checagemMorte = setInterval(() =>{
-
-    const obstaculoPosition = obstaculo.offsetLeft;
-    const jogadorPosition = +window.getComputedStyle(jogador).bottom.replace("px", "")
-
-    if(obstaculoPosition <= 150 && obstaculoPosition > 0 && jogadorosition < 80){
-        //No caso aqui acabaria com a animação do obstaculo e do jogador
-        obstaculo.style.animation = "none";
-        obstaculo.style.left = `${obstaculoPosition}px`;
-
-        jogador.style.animation = "none";
-        jogador.style.bottom = `${jogadorPosition}px`;
-
-        //jogador.src = IMAGEM DO DINOSSAURO APOS COLISAO
-        jogador.style.width = "50px";
-        jogador.style.marginLeft = "50px";
-
-        clearInterval(checagemMorte)
-
-    }
-
-}, 10);*/
-//Aqui é o código para criar a colisão, nele é preciso fazer a checagem num intervalo de 10ms para ver se o jogador e o obstáculo 
-//se tocam, e daí encerrar as animações e dar o alerta de fim do jogo.
-
-//Essa parte de criar a colisão eu entendi como faz e tals, mas eu preciso de ajuda para fazer se encaixar nas arrays.
-//queria saber como faz, para conectar isso com o restante do código.
-
 /* -------------------------------------------------------------------------- */
 /*                                    LOOP                                    */
 /* -------------------------------------------------------------------------- */
 
-/* As duas constantes seguintes são uma lista contendo as funções necessárias para exibir o jogo
-    A lista `TELA_INICIAL` contém a função que gera o menu principal
-    Em paralelo, a lista `JOGO` contém a função que gera a fase */
+/*  As duas constantes seguintes são uma lista contendo as funções necessárias 
+    para exibir o jogo. A lista `TELA_INICIAL` contém a função que gera o menu 
+    principal. Em paralelo, a lista `JOGO` contém a função que gera a fase */
 const TELA_INICIAL = [ () => criarMenu(ctx)(logo)(Cenario) ];
 const JOGO = [ () => criarFase(ctx)(Estado)(Cenario)(Jogador) ];
 
 const loopJogo = (executar) => (listaFuncoes) => (tempoAtual) => (tempo) => {
-    /*  ** Infelizmente, até o momento não encontramos uma forma de gerenciar estados sem quebrar o paradigma funcional.
-        Seguiremos buscando */
+    /*  ** Infelizmente, até o momento não encontramos uma forma de gerenciar 
+        estados sem quebrar o paradigma funcional. Seguiremos buscando */
     if (Estado.faseAtual == -1) Estado.faseAtual = 0;
     if (Estado.faseAtual > 0) Estado.pontuacao += 1;
+
+    /*  Compara o tempo anterior com o tempo atual a cada loop nos fornece o FPS
+        Enquanto estavamos desenvolvendo o jogo, percebemos que diferentes telas
+        geravam diferentes taxas de frames por segundo. Pelo fato de usarmos uma
+        velocidade constante para movimentar objetos e pulos do jogador, notamos
+        que mesmo sendo uma constante, a velocidade variava devido a frequência
+        dos monitores.
+        
+        Por exemplo, digamos que nossa velocidade é 2; Em nosso jogo, velocidade 
+        é um multiplicador, onde `posicao += 1 * velocidade`
+        A função nativa requestAnimationFrame tenta se autoexecutar x vezes de 
+        forma que x seja aproximadamente a mesma frquência do monitor
+        
+        Então, percebemos que em monitores de 60hz, mesmo tendo velocidade 
+        constante 2, o jogador pulava mais lento pois a função se autoexecutava 
+        60 vezes por segundo, enquanto em monitores de 120hz, a velocidade dobrava 
+        
+        Nossa solução foi, infelizmente, quebrar o paradigma, e tornar a velocidade
+        uma variavel em função da frequência do monitor
+
+        Caso fps < 90, então, velocidade = 2, senão, velocidade = 1; */
 
     const tempoNovo = new Date;
     const fps       = 1000 / (tempoNovo - tempoAtual);
     const deltaVelocidade = fps < 90 ? 2 : 1;
     Estado.velocidade = deltaVelocidade;
-    /* ´executar´ é um parâmetro onde se espera como argumento uma função que execute recursivamente uma lista de funções
-        Esse é o momento onde serão executados no loop o menu principal, e a fase */
-    executar(listaFuncoes);
-    window.requestAnimationFrame(loopJogo(execFuncoes)(listaFuncoes)(tempoNovo)); // Loop recursivo
+
+    /* ´executar´ é um parâmetro onde se espera como argumento uma função que execute 
+        recursivamente uma lista de funções. Esse é o momento onde serão executados
+        no loop o menu principal, e a fase */
+    if (!Estado.pausado) executar(listaFuncoes);
+
+    /* Aqui é onde acontece o loop, a cada chamada da função, ela chamará a si mesma novamente */
+    window.requestAnimationFrame(loopJogo(execFuncoes)(listaFuncoes)(tempoNovo));
 };
 
 /*  Primeira chamada do loop. Ele só será iniciado após a página carregar todos os assets
     Isso é necessário pois, caso o loop se inicie antes, as imagens não serão exibidas */
 logo.onload = () => window.requestAnimationFrame(loopJogo(execFuncoes)([...TELA_INICIAL, ...JOGO])(tempoAtual));
+
