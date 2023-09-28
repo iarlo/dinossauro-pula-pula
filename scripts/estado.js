@@ -3,6 +3,7 @@ const Estado = {};
 Estado.faseAtual = -1;
 Estado.pontuacao = 0;
 Estado.melhorPontuacao = 0;
+Estado.pausado = false;
 Estado.jogadorPulando = false;
 Estado.jogadorPerdeu = false;
 Estado.obstaculos = []; // Lista de obstáculos
