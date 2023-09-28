@@ -1,27 +1,35 @@
-// Referências: 
-//      https://github.com/chrokh/fp-games
+/* Referências: 
+      https://github.com/chrokh/fp-games 
+*/
 
 const canvas = document.getElementById("dinoPP");
 const ctx = canvas.getContext("2d");
 const logo = Cenario.criarImagem("assets/logo.png")();
 
-// Executa recursivamente uma lista de funções
+/*  Executa recursivamente uma lista de funções.
+    Poupa tempo caso, no futuro, seja necessária a adição de mais 
+    funções ao loop sem alterar o corpo da função ´loopJogo´ */
 const execFuncoes = ([primeiroElemento, ...resto]) => {
     if (typeof primeiroElemento == "undefined") return;
     primeiroElemento();
     return execFuncoes(resto);
 };
 
-// Criar menu principal: logo, texto
+/* -------------------------------------------------------------------------- */
+/*                                    JOGO                                    */
+/* -------------------------------------------------------------------------- */
+
+/*  Aqui onde é criado o menu principal.
+    Impressão da logo e mensagem. */
 const criarMenu = (ctx) => (logo) => (cenario) => {
     // Define o tamanho do canvas para o mesmo tamanho da janela
     ctx.canvas.width = window.innerWidth;
     ctx.canvas.height = window.innerHeight;
 
     const canvasTamanho = cenario.tamanho(ctx); // Tamanho do canvas
-    const canvasCentro = cenario.proporcao(1/2)(canvasTamanho); // Centro do canvas
+    const canvasCentro  = cenario.proporcao(1/2)(canvasTamanho); // Centro do canvas
     const logoDimensoes = cenario.proporcao(1/3)({ x: logo.width, y: logo.height }); // Dimensões da imagem logo
-    const logoPosicao = cenario.proporcao(1/2)(logoDimensoes); // Posição da imagem logo
+    const logoPosicao   = cenario.proporcao(1/2)(logoDimensoes); // Posição da imagem logo
 
     ctx.drawImage(logo, canvasCentro.x - logoPosicao.x, canvasCentro.y - logoPosicao.y, logoDimensoes.x, logoDimensoes.y); // Imprimir a logo
 
@@ -74,31 +82,48 @@ const criarFase = (ctx) => (estado) => (cenario) => (jogador) => {
     ctx.closePath();
 };
 
-const TELA_INICIAL = [ () => criarMenu(ctx)(logo)(Cenario) ];
-const JOGO = [ () => criarFase(ctx)(Estado)(Cenario)(Jogador) ];
+/* -------------------------------------------------------------------------- */
+/*                                   EVENTOS                                  */
+/* -------------------------------------------------------------------------- */
 
-// Executar recursivamente uma lista de funções
-const carregarTelaInicial = () => execFuncoes(TELA_INICIAL);
-const carregarFase = () => execFuncoes(JOGO);
-
+/* Evento acionado quando uma tecla é pressionada
+    Dentro, podemos gerenciar ações como a de pular, ou iniciar a partida */
 window.addEventListener("keydown", (e) => { 
     if (e.code != "Space" || Estado.faseAtual == -1 || Jogador.estaEmAnimacao || Jogador.estaPulando)  return;
     if (Estado.faseAtual == 0) Estado.faseAtual = 1;
     else Jogador.estaPulando = true;
-}, false); // Evento de quando pressionada a tecla espaço. Caso esteja no menu, o jogo será iniciado; Caso esteja no jogo, a ação pular será chamada
+}, false);
 
+/*  Evento acionado quando a janela é redimensionada
+    Quando alterado o tamanho da página, o cenário deve ser recarregado para evitar erros */
 window.addEventListener("resize", () => {
     Estado.faseAtual = 0;
     Jogador.yInicial = Jogador.resetarYInicial();
     Estado.limparObstaculos();
-}, false); // Quando redimensionado, o cenário deve ser recarregado para evitar erros
+}, false);
 
-const loopJogo = (tempo) => {
+/* -------------------------------------------------------------------------- */
+/*                                    LOOP                                    */
+/* -------------------------------------------------------------------------- */
+
+/* As duas constantes seguintes são uma lista contendo as funções necessárias para exibir o jogo
+    A lista `TELA_INICIAL` contém a função que gera o menu principal
+    Em paralelo, a lista `JOGO` contém a função que gera a fase */
+const TELA_INICIAL = [ () => criarMenu(ctx)(logo)(Cenario) ];
+const JOGO = [ () => criarFase(ctx)(Estado)(Cenario)(Jogador) ];
+
+const loopJogo = (executar) => (listaFuncoes) => (tempo) => {
+    /*  ** Infelizmente, até o momento não encontramos uma forma de gerenciar estados sem quebrar o paradigma funcional.
+        Seguiremos buscando */
     if (Estado.faseAtual == -1) Estado.faseAtual = 0;
-    if (Estado.faseAtual > 0) Estado.pontuacao = Cenario.moverCoordenadas({ x: 1, y: 0 })({ x: Estado.pontuacao, y: 0 }).x;
-    carregarTelaInicial();
-    carregarFase();
-    window.requestAnimationFrame(loopJogo);
+    if (Estado.faseAtual > 0) Estado.pontuacao += 1;
+    
+    /* ´executar´ é um parâmetro onde se espera como argumento uma função que execute recursivamente uma lista de funções
+        Esse é o momento onde serão executados no loop o menu principal, e a fase */
+    executar(listaFuncoes);
+    window.requestAnimationFrame(loopJogo(execFuncoes)(listaFuncoes)); // Loop recursivo
 };
 
-logo.onload = () => window.requestAnimationFrame(loopJogo);
+/*  Primeira chamada do loop. Ele só será iniciado após a página carregar todos os assets
+    Isso é necessário pois, caso o loop se inicie antes, as imagens não serão exibidas */
+logo.onload = () => window.requestAnimationFrame(loopJogo(execFuncoes)([...TELA_INICIAL, ...JOGO]));
