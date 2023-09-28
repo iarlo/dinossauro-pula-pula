@@ -5,6 +5,7 @@
 const canvas = document.getElementById("dinoPP");
 const ctx = canvas.getContext("2d");
 const logo = Cenario.criarImagem("assets/logo.png")();
+const tempoAtual = new Date();
 
 /*  Executa recursivamente uma lista de funções.
     Poupa tempo caso, no futuro, seja necessária a adição de mais 
@@ -64,13 +65,13 @@ const criarFase = (ctx) => (estado) => (cenario) => (jogador) => {
     // Mapeia os obstáculos para serem impressos e retorna uma nova posição para eles
     estado.obstaculos = estado.obstaculos.map((valor, index) => {
         cenario.desenharObstaculo(ctx)({ x: 25, y: 50 })({ x: valor.x * estado.velocidadeInicial, y: valor.y });
-        return { ...valor, x: valor.x - 1 };
+        return { ...valor, x: valor.x - estado.velocidade };
     });
 
     // Mapeia as habilidades para serem impressos e retorna uma nova posição para elas
     estado.habilidades = estado.habilidades.map((valor, index) => {
         cenario.desenharHabilidade(ctx)({ x: 25, y: 25 })({ x: valor.x * estado.velocidadeInicial, y: valor.y });
-        return { ...valor, x: valor.x - 1 };
+        return { ...valor, x: valor.x - estado.velocidade };
     });
 
     jogador.pular(125); // Define a altura do pulo
@@ -112,18 +113,22 @@ window.addEventListener("resize", () => {
 const TELA_INICIAL = [ () => criarMenu(ctx)(logo)(Cenario) ];
 const JOGO = [ () => criarFase(ctx)(Estado)(Cenario)(Jogador) ];
 
-const loopJogo = (executar) => (listaFuncoes) => (tempo) => {
+const loopJogo = (executar) => (listaFuncoes) => (tempoAtual) => (tempo) => {
     /*  ** Infelizmente, até o momento não encontramos uma forma de gerenciar estados sem quebrar o paradigma funcional.
         Seguiremos buscando */
     if (Estado.faseAtual == -1) Estado.faseAtual = 0;
     if (Estado.faseAtual > 0) Estado.pontuacao += 1;
-    
+
+    const tempoNovo = new Date;
+    const fps       = 1000 / (tempoNovo - tempoAtual);
+    const deltaVelocidade = fps < 90 ? 2 : 1;
+    Estado.velocidade = deltaVelocidade;
     /* ´executar´ é um parâmetro onde se espera como argumento uma função que execute recursivamente uma lista de funções
         Esse é o momento onde serão executados no loop o menu principal, e a fase */
     executar(listaFuncoes);
-    window.requestAnimationFrame(loopJogo(execFuncoes)(listaFuncoes)); // Loop recursivo
+    window.requestAnimationFrame(loopJogo(execFuncoes)(listaFuncoes)(tempoNovo)); // Loop recursivo
 };
 
 /*  Primeira chamada do loop. Ele só será iniciado após a página carregar todos os assets
     Isso é necessário pois, caso o loop se inicie antes, as imagens não serão exibidas */
-logo.onload = () => window.requestAnimationFrame(loopJogo(execFuncoes)([...TELA_INICIAL, ...JOGO]));
+logo.onload = () => window.requestAnimationFrame(loopJogo(execFuncoes)([...TELA_INICIAL, ...JOGO])(tempoAtual));

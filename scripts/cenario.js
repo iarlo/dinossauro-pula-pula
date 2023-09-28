@@ -9,12 +9,17 @@ Cenario.criarImagem = (caminho) => (estilo) => {
     imagem.style = { ...estilo };
     return imagem;
 };
+Cenario.definirTamanho = (ctx) => (width) => (height) => {
+    const escala = window.devicePixelRatio; 
+    ctx.canvas.width = Math.floor(width * escala);
+    ctx.canvas.height = Math.floor(height * escala);
+}
 // Preparar a formatação para poder exibir o texto
 Cenario.formatarTexto = (ctx) => (tamanho) => (align) => (cor) => {
     ctx.fillStyle = cor;
     ctx.textAlign = align;
     ctx.textBaseline = "middle";
-    ctx.font = `${tamanho}px arial`;
+    ctx.font = `${tamanho}pt arial`;
     return ctx;
 };
 Cenario.desenharHabilidade = (ctx) => (tamanho) => (posicao) => {
@@ -25,4 +30,5 @@ Cenario.desenharObstaculo = (ctx) => (tamanho) => (posicao) => {
     ctx.fillStyle = "black";
     ctx.fillRect(posicao.x, posicao.y, tamanho.x, tamanho.y);
 };
-Cenario.criarObstaculo = (semente) => (index) => (diminuir) => ({ x: index / 2 * (semente + 200), y: window.innerHeight / 2 });
+
+Cenario.criarObstaculo = (semente) => (index) => (diminuir) => ({ x: ((index + 1) / 2 * (semente + 200)) - diminuir, y: Estado.altura });
