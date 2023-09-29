@@ -37,6 +37,7 @@ const execFuncoes = ([primeiroElemento, ...resto]) => {
     Impressão da logo e mensagem. */
 const criarMenu = (ctx) => (logo) => (cenario) => {
     // if (estado.faseAtual > 0) return;
+    // if (estado.faseAtual > 0) return;
     cenario.definirTamanho(ctx)(600)(300);
     const canvasTamanho = cenario.tamanho(ctx); // Tamanho do canvas
     const canvasCentro  = cenario.proporcao(1/2)(canvasTamanho); // Centro do canvas
@@ -78,6 +79,7 @@ const criarFase = (ctx) => (estado) => (cenario) => (jogador) => {
     if (estaForaDaTela(estado.obstaculos[0].x)(estado.tamanhoInicialObstaculos.x)) {
         estado.obstaculos = removerPrimeiroElemento(estado.obstaculos);
         estado.obstaculos.push(cenario.criarObstaculo(estado.semente() * 200)(2)(0));
+        estado.obstaculos.push(cenario.criarObstaculo(estado.semente() * 200)(2)(0));
     };
 
     // Caso a primeira habilidade da lista esteja fora da tela, remover da lista e criar uma nova
@@ -92,8 +94,6 @@ const criarFase = (ctx) => (estado) => (cenario) => (jogador) => {
     estado.obstaculos = estado.obstaculos.map((valor, index) => {
         const posicao = { x: valor.x * estado.velocidadeInicial, y: valor.y };
         cenario.desenharObstaculo(ctx)({ x: 25, y: 50 })(posicao);
-        const { x, y } = jogador.posicao;
-        // x > b.x && x < b.x + brickWidth && y > b.y && y < b.y + brickHeight
         if (checarColisao(jogador.posicao)(posicao)(jogador.tamanho)(estado.tamanhoInicialObstaculos)) {
             musicaAmbiente.pause();
             perdeuAudio.play();
@@ -145,7 +145,34 @@ window.addEventListener("resize", () => {
     Estado.limparObstaculos();
 }, false);
 
+/*
+const checagemMorte = setInterval(() =>{
 
+    const obstaculoPosition = obstaculo.offsetLeft;
+    const jogadorPosition = +window.getComputedStyle(jogador).bottom.replace("px", "")
+
+    if(obstaculoPosition <= 150 && obstaculoPosition > 0 && jogadorosition < 80){
+        //No caso aqui acabaria com a animação do obstaculo e do jogador
+        obstaculo.style.animation = "none";
+        obstaculo.style.left = `${obstaculoPosition}px`;
+
+        jogador.style.animation = "none";
+        jogador.style.bottom = `${jogadorPosition}px`;
+
+        //jogador.src = IMAGEM DO DINOSSAURO APOS COLISAO
+        jogador.style.width = "50px";
+        jogador.style.marginLeft = "50px";
+
+        clearInterval(checagemMorte)
+
+    }
+
+}, 10);*/
+//Aqui é o código para criar a colisão, nele é preciso fazer a checagem num intervalo de 10ms para ver se o jogador e o obstáculo 
+//se tocam, e daí encerrar as animações e dar o alerta de fim do jogo.
+
+//Essa parte de criar a colisão eu entendi como faz e tals, mas eu preciso de ajuda para fazer se encaixar nas arrays.
+//queria saber como faz, para conectar isso com o restante do código.
 
 /* -------------------------------------------------------------------------- */
 /*                                    LOOP                                    */
@@ -154,10 +181,15 @@ window.addEventListener("resize", () => {
 /*  As duas constantes seguintes são uma lista contendo as funções necessárias 
     para exibir o jogo. A lista `TELA_INICIAL` contém a função que gera o menu 
     principal. Em paralelo, a lista `JOGO` contém a função que gera a fase */
+/*  As duas constantes seguintes são uma lista contendo as funções necessárias 
+    para exibir o jogo. A lista `TELA_INICIAL` contém a função que gera o menu 
+    principal. Em paralelo, a lista `JOGO` contém a função que gera a fase */
 const TELA_INICIAL = [ () => criarMenu(ctx)(logo)(Cenario) ];
 const JOGO = [ () => criarFase(ctx)(Estado)(Cenario)(Jogador) ];
 
 const loopJogo = (executar) => (listaFuncoes) => (tempoAtual) => (tempo) => {
+    /*  ** Infelizmente, até o momento não encontramos uma forma de gerenciar 
+        estados sem quebrar o paradigma funcional. Seguiremos buscando */
     /*  ** Infelizmente, até o momento não encontramos uma forma de gerenciar 
         estados sem quebrar o paradigma funcional. Seguiremos buscando */
     if (Estado.faseAtual == -1) Estado.faseAtual = 0;
