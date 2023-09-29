@@ -9,6 +9,11 @@ Cenario.criarImagem = (caminho) => (estilo) => {
     imagem.style = { ...estilo };
     return imagem;
 };
+Cenario.criarAudio = (caminho) => {
+    const audio = new Audio(caminho);
+    return audio;
+};
+
 Cenario.definirTamanho = (ctx) => (width) => (height) => {
     const escala = window.devicePixelRatio; 
     ctx.canvas.width = Math.floor(width * escala);
@@ -16,10 +21,13 @@ Cenario.definirTamanho = (ctx) => (width) => (height) => {
 }
 // Preparar a formatação para poder exibir o texto
 Cenario.formatarTexto = (ctx) => (tamanho) => (align) => (cor) => {
-    ctx.fillStyle = cor;
+    ctx.fillStyle = "rgb(26, 255, 128)";
     ctx.textAlign = align;
     ctx.textBaseline = "middle";
-    ctx.font = `${tamanho}pt arial`;
+    ctx.font = `${tamanho}pt VT323, monospace`;
+    // text-shadow: 0 0 10px ;
+    ctx.shadowBlur = 7;
+    ctx.shadowColor = "rgb(26, 255, 128)";
     return ctx;
 };
 Cenario.desenharHabilidade = (ctx) => (tamanho) => (posicao) => {
@@ -27,8 +35,18 @@ Cenario.desenharHabilidade = (ctx) => (tamanho) => (posicao) => {
     ctx.fillRect(posicao.x, posicao.y, tamanho.x, tamanho.y);
 };
 Cenario.desenharObstaculo = (ctx) => (tamanho) => (posicao) => {
-    ctx.fillStyle = "black";
+    ctx.fillStyle = "white";
     ctx.fillRect(posicao.x, posicao.y, tamanho.x, tamanho.y);
 };
+Cenario.desenharChao = (ctx) => {
+    ctx.strokeStyle = "rgb(26, 255, 128)";
+    ctx.shadowBlur = 7;
+    ctx.shadowColor = "rgb(26, 255, 128)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, Estado.altura + 50);
+    ctx.lineTo(1200, Estado.altura + 50);
+    ctx.stroke();
+}
 
 Cenario.criarObstaculo = (semente) => (index) => (diminuir) => ({ x: ((index + 1) / 2 * (semente + 200)) - diminuir, y: Estado.altura });

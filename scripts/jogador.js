@@ -7,16 +7,16 @@ Jogador.posicao = { x: 50, y: Estado.altura };
 Jogador.estaPulando = false;
 Jogador.estaEmAnimacao = false;
 
-Jogador.pular = (altura) => {
+Jogador.pular = (altura) => (velocidade) => {
     if (Jogador.estaPulando && Jogador.posicao.y >= Jogador.yInicial - altura) {
         Jogador.estaEmAnimacao = true;
-        Jogador.posicao = Cenario.moverCoordenadas({ x: 0, y: -5 * Estado.velocidade })(Jogador.posicao);
+        Jogador.posicao = Cenario.moverCoordenadas({ x: 0, y: -4 * velocidade })(Jogador.posicao);
     }
     if (Jogador.posicao.y < Jogador.yInicial) {
         if (Jogador.posicao.y <= Jogador.yInicial - altura) setTimeout(() => Jogador.estaPulando = false, 150);
-        if (!Jogador.estaPulando) Jogador.posicao = Cenario.moverCoordenadas({ x: 0, y: 4 * Estado.velocidade })(Jogador.posicao);
+        if (!Jogador.estaPulando) Jogador.posicao = Cenario.moverCoordenadas({ x: 0, y: 4 * velocidade })(Jogador.posicao);
     }
-    Jogador.posicao.y >= Jogador.yInicial ? Jogador.estaEmAnimacao = false : null;
+    Jogador.posicao.y >= Jogador.yInicial - 10 ? Jogador.estaEmAnimacao = false : null;
 }
 
 Jogador.desenhar = (ctx) => (posicao) => (tamanho) => {
