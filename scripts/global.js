@@ -23,6 +23,7 @@ const execFuncoes = ([primeiroElemento, ...resto]) => {
 /*  Aqui onde é criado o menu principal.
     Impressão da logo e mensagem. */
 const criarMenu = (ctx) => (logo) => (cenario) => {
+    // if (estado.faseAtual > 0) return;
     cenario.definirTamanho(ctx)(600)(300);
     const canvasTamanho = cenario.tamanho(ctx); // Tamanho do canvas
     const canvasCentro  = cenario.proporcao(1/2)(canvasTamanho); // Centro do canvas
@@ -52,6 +53,8 @@ const criarFase = (ctx) => (estado) => (cenario) => (jogador) => {
 
     const estaForaDaTela = (posicao) => (tamanho) => posicao < 0 - tamanho; 
 
+    const checarColisao = (jogador) => (obstaculo) => (tamanhoJogador) => (tamanhoObstaculo) => jogador.x + tamanhoJogador.x >= obstaculo.x && jogador.y + tamanhoJogador.y >= obstaculo.y && obstaculo.x + tamanhoObstaculo.x >= jogador.x && obstaculo.y + tamanhoObstaculo.y >= jogador.y;
+
     // estado.obstaculos = Array(5).fill().map((valor, index) => cenario.criarObstaculo((estado.semente() + 1) * 200)(index+1)(window.innerWidth));
     if (estado.obstaculos.length === 0) estado.obstaculos = criarObstaculos();
     if (estado.habilidades.length === 0) estado.habilidades = criarHabilidades();
@@ -59,7 +62,7 @@ const criarFase = (ctx) => (estado) => (cenario) => (jogador) => {
     // Caso o primeiro obstáculo da lista esteja fora da tela, remover da lista e criar um novo
     if (estaForaDaTela(estado.obstaculos[0].x)(estado.tamanhoInicialObstaculos.x)) {
         estado.obstaculos = removerPrimeiroElemento(estado.obstaculos);
-        estado.obstaculos.push(cenario.criarObstaculo(estado.semente() * 200)(2)(-200));
+        estado.obstaculos.push(cenario.criarObstaculo(estado.semente() * 200)(2)(0));
     };
 
     // Caso a primeira habilidade da lista esteja fora da tela, remover da lista e criar uma nova
@@ -69,11 +72,17 @@ const criarFase = (ctx) => (estado) => (cenario) => (jogador) => {
     }
 
     const canvasTamanho = cenario.tamanho(ctx);
-    // if (Jogador.posicao.y === -1) Jogador.posicao.y = ctx.canvas.height / 2;
  
     // Mapeia os obstáculos para serem impressos e retorna uma nova posição para eles
     estado.obstaculos = estado.obstaculos.map((valor, index) => {
-        cenario.desenharObstaculo(ctx)({ x: 25, y: 50 })({ x: valor.x * estado.velocidadeInicial, y: valor.y });
+        const posicao = { x: valor.x * estado.velocidadeInicial, y: valor.y };
+        cenario.desenharObstaculo(ctx)({ x: 25, y: 50 })(posicao);
+        const { x, y } = jogador.posicao;
+        // x > b.x && x < b.x + brickWidth && y > b.y && y < b.y + brickHeight
+        if (checarColisao(jogador.posicao)(posicao)(jogador.tamanho)(estado.tamanhoInicialObstaculos)) {
+            Estado.pausado = true;
+            setTimeout(() => { document.location.reload(); }, 1000);
+        };
         return { ...valor, x: valor.x - estado.velocidade };
     });
 
@@ -110,6 +119,7 @@ window.addEventListener("resize", () => {
     Jogador.yInicial = Jogador.resetarYInicial();
     Estado.limparObstaculos();
 }, false);
+
 
 /* -------------------------------------------------------------------------- */
 /*                                    LOOP                                    */
@@ -165,4 +175,3 @@ const loopJogo = (executar) => (listaFuncoes) => (tempoAtual) => (tempo) => {
 /*  Primeira chamada do loop. Ele só será iniciado após a página carregar todos os assets
     Isso é necessário pois, caso o loop se inicie antes, as imagens não serão exibidas */
 logo.onload = () => window.requestAnimationFrame(loopJogo(execFuncoes)([...TELA_INICIAL, ...JOGO])(tempoAtual));
-
