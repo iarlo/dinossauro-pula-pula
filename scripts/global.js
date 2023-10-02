@@ -54,21 +54,65 @@ const criarMenu = (ctx) => (logo) => (cenario) => {
 // Criar fase: jogador, obstáculos, potuação
 const criarFase = (ctx) => (estado) => (cenario) => (jogador) => {
     if (estado.faseAtual < 1) return;
-
+    /* Define o tamanho do canvas, 600x300 é o que decidimos usar */
     cenario.definirTamanho(ctx)(600)(300);
 
+    /*  A pontuação do jogador deve ser normalizada, 
+        pois ela é atualizada pelo loop inúmeras vezes 
+        por segundo, fazendo com que a última casa seja 
+        atualizada rápido demais, dificultando a visualização
+        
+        Para isso, apenas usaremos substring para remover
+        o último caractere do texto */
     const pontuacao = estado.pontuacao.toString();
     const pontuacaoNormalizada = pontuacao.substring(0, pontuacao.length - 1);
 
+    /*  Usado para preencher listas de obstáculos e
+        habilidades. Deve ser passado como parâmetro,
+        o tamanho e a função que será executada.
+
+        No caso, nossas funções devem poder receber
+        o index como parâmetro. Isso vai ajudar a
+        ordenar os obstáculos gerados */
     const preencherLista = (tamanho) => (exec) => Array(tamanho).fill().map((_v, index) => exec(index));
+
+    /*  Esta função será chamada para remover certo
+        elemento de uma lista. O uso padrão será para
+        remover obstáculos e habilidades que já estão
+        fora da visão do jogador */
     const removerElemento = (qnt) => (lista) => lista.slice(qnt);
     const removerPrimeiroElemento = removerElemento(1);
 
+    /* Criando 5 obstáculos padrões */
     const criarObstaculos = () => preencherLista(5)((index) => cenario.criarObstaculo(estado.semente() * 200)(index)(0));
     const criarHabilidades = () => preencherLista(1)(() => cenario.criarObstaculo(estado.semente() * 500)(2)(0));
 
+    /*  Para checar se algo está fora da área de visão,
+        comparamos a posição do elemento com um dos lados 
+        do canvas. No caso, usaremos 0, que representa o 
+        lado esquerdo da tela. 
+        
+        Como a posição do objeto é sempre um ponto que
+        representa o lado superior esquerdo do elemento,
+        devemos também diminuir 0 pela largura do objeto
+
+        Por exemplo, se quisermos saber se um objeto de
+        50px de largura está fora da tela, temos que:
+
+            Quando a posição do elemento for 0, o lado
+            esquerdo do elemento está no limite da área
+            de visão
+
+            Quando -50 < posição < 0, o elemento está
+            parcialmente fora do canvas
+
+            Quando a posição < -50, a totalidade do
+            elemento está fora da área de visão */
     const estaForaDaTela = (posicao) => (tamanho) => posicao < 0 - tamanho; 
 
+    /*  Para checar se um objeto está em colisão com
+        o jogador, checamos se a posição do jogador
+        está em conflito com a posição do elemento */
     const checarColisao = (jogador) => (obstaculo) => (tamanhoJogador) => (tamanhoObstaculo) => jogador.x + tamanhoJogador.x >= obstaculo.x && jogador.y + tamanhoJogador.y >= obstaculo.y && obstaculo.x + tamanhoObstaculo.x >= jogador.x && obstaculo.y + tamanhoObstaculo.y >= jogador.y;
 
     // estado.obstaculos = Array(5).fill().map((valor, index) => cenario.criarObstaculo((estado.semente() + 1) * 200)(index+1)(window.innerWidth));
@@ -78,8 +122,7 @@ const criarFase = (ctx) => (estado) => (cenario) => (jogador) => {
     // Caso o primeiro obstáculo da lista esteja fora da tela, remover da lista e criar um novo
     if (estaForaDaTela(estado.obstaculos[0].x)(estado.tamanhoInicialObstaculos.x)) {
         estado.obstaculos = removerPrimeiroElemento(estado.obstaculos);
-        estado.obstaculos.push(cenario.criarObstaculo(estado.semente() * 200)(2)(0));
-        estado.obstaculos.push(cenario.criarObstaculo(estado.semente() * 200)(2)(0));
+        estado.obstaculos.push(cenario.criarObstaculo(estado.semente() * 200)(3)(0));
     };
 
     // Caso a primeira habilidade da lista esteja fora da tela, remover da lista e criar uma nova
@@ -123,7 +166,8 @@ const criarFase = (ctx) => (estado) => (cenario) => (jogador) => {
 /* -------------------------------------------------------------------------- */
 
 /* Evento acionado quando uma tecla é pressionada
-    Dentro, podemos gerenciar ações como a de pular, ou iniciar a partida */
+    Dentro, podemos gerenciar ações como a de pular, 
+    ou iniciar a partida */
 window.addEventListener("keydown", (e) => { 
     if (e.code != "Space" || Estado.faseAtual == -1 || Jogador.estaEmAnimacao || Jogador.estaPulando)  return;
     if (Estado.faseAtual == 0) {
@@ -138,41 +182,13 @@ window.addEventListener("keydown", (e) => {
 }, false);
 
 /*  Evento acionado quando a janela é redimensionada
-    Quando alterado o tamanho da página, o cenário deve ser recarregado para evitar erros */
+    Quando alterado o tamanho da página, o cenário 
+    deve ser recarregado para evitar erros */
 window.addEventListener("resize", () => {
     Estado.faseAtual = 0;
     Jogador.yInicial = Jogador.resetarYInicial();
     Estado.limparObstaculos();
 }, false);
-
-/*
-const checagemMorte = setInterval(() =>{
-
-    const obstaculoPosition = obstaculo.offsetLeft;
-    const jogadorPosition = +window.getComputedStyle(jogador).bottom.replace("px", "")
-
-    if(obstaculoPosition <= 150 && obstaculoPosition > 0 && jogadorosition < 80){
-        //No caso aqui acabaria com a animação do obstaculo e do jogador
-        obstaculo.style.animation = "none";
-        obstaculo.style.left = `${obstaculoPosition}px`;
-
-        jogador.style.animation = "none";
-        jogador.style.bottom = `${jogadorPosition}px`;
-
-        //jogador.src = IMAGEM DO DINOSSAURO APOS COLISAO
-        jogador.style.width = "50px";
-        jogador.style.marginLeft = "50px";
-
-        clearInterval(checagemMorte)
-
-    }
-
-}, 10);*/
-//Aqui é o código para criar a colisão, nele é preciso fazer a checagem num intervalo de 10ms para ver se o jogador e o obstáculo 
-//se tocam, e daí encerrar as animações e dar o alerta de fim do jogo.
-
-//Essa parte de criar a colisão eu entendi como faz e tals, mas eu preciso de ajuda para fazer se encaixar nas arrays.
-//queria saber como faz, para conectar isso com o restante do código.
 
 /* -------------------------------------------------------------------------- */
 /*                                    LOOP                                    */
@@ -181,15 +197,10 @@ const checagemMorte = setInterval(() =>{
 /*  As duas constantes seguintes são uma lista contendo as funções necessárias 
     para exibir o jogo. A lista `TELA_INICIAL` contém a função que gera o menu 
     principal. Em paralelo, a lista `JOGO` contém a função que gera a fase */
-/*  As duas constantes seguintes são uma lista contendo as funções necessárias 
-    para exibir o jogo. A lista `TELA_INICIAL` contém a função que gera o menu 
-    principal. Em paralelo, a lista `JOGO` contém a função que gera a fase */
 const TELA_INICIAL = [ () => criarMenu(ctx)(logo)(Cenario) ];
 const JOGO = [ () => criarFase(ctx)(Estado)(Cenario)(Jogador) ];
 
 const loopJogo = (executar) => (listaFuncoes) => (tempoAtual) => (tempo) => {
-    /*  ** Infelizmente, até o momento não encontramos uma forma de gerenciar 
-        estados sem quebrar o paradigma funcional. Seguiremos buscando */
     /*  ** Infelizmente, até o momento não encontramos uma forma de gerenciar 
         estados sem quebrar o paradigma funcional. Seguiremos buscando */
     if (Estado.faseAtual == -1) Estado.faseAtual = 0;
@@ -218,7 +229,7 @@ const loopJogo = (executar) => (listaFuncoes) => (tempoAtual) => (tempo) => {
 
     const tempoNovo       = new Date;
     const fps             = 1000 / (tempoNovo - tempoAtual);
-    Estado.velocidade     = fps < 90 ? 2 : 1;;
+    Estado.velocidade     = fps < 90 ? 2 : 1;
 
     /* ´executar´ é um parâmetro onde se espera como argumento uma função que execute 
         recursivamente uma lista de funções. Esse é o momento onde serão executados
