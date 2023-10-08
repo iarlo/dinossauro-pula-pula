@@ -207,6 +207,11 @@ const assets = [
 		caminho: 'assets/image/dinossauro/2_invertido.png',
 	},
 	{
+		tipo: 'imagem',
+		nome: 'habilidade',
+		caminho: 'assets/image/habilidade.png',
+	},
+	{
 		tipo: 'audio',
 		nome: 'fim_de_jogo',
 		caminho: 'assets/hurt.mp3',
@@ -358,163 +363,166 @@ const criarMenu = (ctx) => (logo) => (utilidades) => {
 };
 
 // Criar fase: jogador, obstáculos, potuação
-const criarFase = (ctx) => (estado) => (cenario) => (jogador) => {
-	if (estado.faseAtual < 1) return;
-	/* Define o tamanho do canvas, 600x300 é o que decidimos usar */
-	cenario.definirTamanho(ctx)(600)(300);
+const criarFase = (ctx) => (utilidades) => (assets) => (estado) => {
+	/* 	Caso o jogador esteja no menu, não montar a fase */
+	if (estado.faseAtual < 1) return false;
 
-	/*  A pontuação do jogador deve ser normalizada,
-		pois ela é atualizada pelo loop inúmeras vezes
-		por segundo, fazendo com que a última casa seja
+	const canvas = utilidades.definirTamanhoDoCanvas(ctx)(estado.tamanhoCanvas.x)(estado.tamanhoCanvas.y);
+	const tamanhoCanvas = utilidades.tamanhoCanvas(canvas);
+
+	/*  A pontuação do jogador deve ser normalizada, pois ela é atualizada pelo
+		loop inúmeras vezes por segundo, fazendo com que a última casa seja
 		atualizada rápido demais, dificultando a visualização
 
-		Para isso, apenas usaremos substring para remover
-		o último caractere do texto */
-	const pontuacao = estado.pontuacao.toString();
-	const pontuacaoNormalizada = pontuacao.substring(0, pontuacao.length - 1);
+		Para isso, apenas usaremos substring para remover o último caractere do
+		texto */
+	const pontuacaoAtual = estado.pontuacaoAtual.toString();
+	const pontuacaoNormalizada = pontuacaoAtual.substring(0, pontuacaoAtual.length - 1);
 
-	/*  Usado para preencher listas de obstáculos e
-		habilidades. Deve ser passado como parâmetro,
-		o tamanho e a função que será executada.
+	const habilidadeTimer = estado.habilidadeTimer.toString();
+	const habilidadeTimerNormalizado = habilidadeTimer.substring(0, habilidadeTimer.length - 2);
 
-		No caso, nossas funções devem poder receber
-		o index como parâmetro. Isso vai ajudar a
-		ordenar os obstáculos gerados */
-	const preencherLista = (tamanho) => (exec) => Array(tamanho).fill().map((_v, index) => exec(index));
-
-	/*  Esta função será chamada para remover certo
-		elemento de uma lista. O uso padrão será para
-		remover obstáculos e habilidades que já estão
-		fora da visão do jogador */
+	/*  Esta função será chamada para remover certo elemento de uma lista. O uso
+		padrão será para remover obstáculos e habilidades que já estão fora da
+		visão do jogador */
 	const removerElemento = (qnt) => (lista) => lista.slice(qnt);
 	const removerPrimeiroElemento = removerElemento(1);
 
-	/* Criando 5 obstáculos padrões */
-	const criarObstaculos = () => preencherLista(5)((index) => cenario.criarObstaculo(estado.semente() * 200)(index)(0));
-	const criarHabilidades = () => preencherLista(1)(() => cenario.criarObstaculo(estado.semente() * 500)(2)(0));
+	/* 	As duas funções a seguir retornam uma lista com `n` elementos, representando
+		obstáculos ou habilidades */
+	const criarObstaculos = () => utilidades.preencherLista(5)((index) => utilidades.criarObstaculo(index)(utilidades.sementeAleatoria()));
+	const criarHabilidades = () => utilidades.preencherLista(1)(() => utilidades.criarObstaculo(2)(utilidades.sementeAleatoria() * 3));
+	const criarNuvens = () => utilidades.preencherLista(5)((index) => (utilidades.criarObstaculo(index + 3)(utilidades.sementeAleatoria() * 2))).map((v) => ({tipo: 0, posicao: v}));
 
-	/*  Para checar se algo está fora da área de visão,
-		comparamos a posição do elemento com um dos lados
-		do canvas. No caso, usaremos 0, que representa o
-		lado esquerdo da tela.
+	/* 	Define a função de pular */
+	const pular = (estado) => (posicaoInicial) => (altura) => (velocidade) => {
+		const {pulando} = estado_;
+		const pos = {...estado.posicaoJogador, y: estado.modificacoes.invertido ? (estado.posicaoJogador.y < 100 ? 100 : estado.posicaoJogador.y) : (estado.posicaoJogador.y > 100 ? 100 : estado.posicaoJogador.y)};
+		const {invertido} = estado.modificacoes;
+		const deltaPosicao = 4 * velocidade;
+		const subir = {...pos, y: pos.y - deltaPosicao};
+		const descer = {...pos, y: pos.y + deltaPosicao};
+		const posInicial = posicaoInicial.y + (invertido ? estado.tamanhoJogador.y : 0);
 
-		Como a posição do objeto é sempre um ponto que
-		representa o lado superior esquerdo do elemento,
-		devemos também diminuir 0 pela largura do objeto
-
-		Por exemplo, se quisermos saber se um objeto de
-		50px de largura está fora da tela, temos que:
-
-			Quando a posição do elemento for 0, o lado
-			esquerdo do elemento está no limite da área
-			de visão
-
-			Quando -50 < posição < 0, o elemento está
-			parcialmente fora do canvas
-
-			Quando a posição < -50, a totalidade do
-			elemento está fora da área de visão */
-	const estaForaDaTela = (posicao) => (tamanho) => posicao < 0 - tamanho;
-
-	/*  Para checar se um objeto está em colisão com
-		o jogador, checamos se a posição do jogador
-		está em conflito com a posição do elemento */
-	const checarColisao = (jogador) => (obstaculo) => (tamanhoJogador) => (tamanhoObstaculo) => jogador.x + tamanhoJogador.x >= obstaculo.x && jogador.y + tamanhoJogador.y >= obstaculo.y && obstaculo.x + tamanhoObstaculo.x >= jogador.x && obstaculo.y + tamanhoObstaculo.y >= jogador.y;
-
-	// Estado.obstaculos = Array(5).fill().map((valor, index) => cenario.criarObstaculo((estado.semente() + 1) * 200)(index+1)(window.innerWidth));
-	if (estado.obstaculos.length === 0) estado.obstaculos = criarObstaculos();
-	if (estado.habilidades.length === 0) estado.habilidades = criarHabilidades();
-
-	// Caso o primeiro obstáculo da lista esteja fora da tela, remover da lista e criar um novo
-	if (estaForaDaTela(estado.obstaculos[0].x)(estado.tamanhoInicialObstaculos.x)) {
-		estado.obstaculos = removerPrimeiroElemento(estado.obstaculos);
-		estado.obstaculos.push(cenario.criarObstaculo(estado.semente() * 200)(3)(0));
-	}
-
-	;
-
-	// Caso a primeira habilidade da lista esteja fora da tela, remover da lista e criar uma nova
-	if (estaForaDaTela(estado.habilidades[0].x)(estado.tamanhoInicialHabilidades.x)) {
-		estado.habilidades = removerPrimeiroElemento(estado.habilidades);
-		estado.habilidades.push(cenario.criarObstaculo((estado.semente() + 1) * 200)(5)(0));
-	}
-
-	const canvasTamanho = cenario.tamanho(ctx);
-
-	// Mapeia os obstáculos para serem impressos e retorna uma nova posição para eles
-	estado.obstaculos = estado.obstaculos.map((valor, index) => {
-		const posicao = {x: valor.x * estado.velocidadeInicial, y: valor.y};
-		cenario.desenharObstaculo(ctx)({x: 25, y: 50})(posicao);
-
-
-		const colisaoObjetos = () => {
-			if (Jogador.invencivel == false) {
-				if (checarColisao(jogador.posicao)(posicao)(jogador.tamanho)(estado.tamanhoInicialObstaculos)) {
-					musicaAmbiente.pause();
-					perdeuAudio.play();
-					Estado.pausado = true;
-					setTimeout(() => {document.location.reload();}, 1000);
-				}
-
-				;
-			} else { }
+		const comecouPulo = invertido
+			? pulando && pos.y < posInicial + altura - estado.tamanhoJogador.y + 3
+			: pulando && pos.y > posInicial - altura;
+		const estaNoAr = invertido
+			? pos.y > posInicial - estado.tamanhoJogador.y
+			: pos.y < posInicial;
+		/*  Checa se o jogador está no ponto mais
+			alto onde se pode chegar ao pular */
+		const pontoLimite = invertido
+			? pos.y >= posInicial + altura - estado.tamanhoJogador.y
+			: pos.y <= posInicial - altura;
+		if (comecouPulo) {
+			estado_.animacao = true;
+			estado.posicaoJogador = invertido ? descer : subir;
 		}
 
-		colisaoObjetos();
-		return {...valor, x: valor.x - estado.velocidade};
+		if (estaNoAr) {
+			if (pontoLimite) setTimeout(() => {estado_.pulando = false; return true;}, 150);
+			if (!pulando) estado.posicaoJogador = invertido ? subir : descer;
+		}
+
+		const estaNoChao = invertido
+			? pos.y == posInicial - estado.tamanhoJogador.y
+			: pos.y == posInicial;
+
+		if (estaNoChao) estado_.animacao = false;
+
+		console.log(posInicial - estado.tamanhoJogador.y, posInicial)
+
+		return estado;
+	}
+
+	/*	Gera uma nova posição para elementos quando `inverter` está ativado */
+	const posicaoInvertida = (estado) => (altura) => estado.tamanhoCanvas.y / 2 + altura
+
+	/* 	Gera e retorna uma nova posição, além de senhar o elemento  */
+	const novaPosicaoElemento = (valor) => (velocidade) => (img) => (imgInvertida) => (tamanho) => (colisao) => {
+		const posicao = {x: valor.x * velocidade, y: estado.modificacoes.invertido ? posicaoInvertida(estado)(valor.y) : tamanhoCanvas.y / 2 - tamanho.y};
+		if (utilidades.checarColisao(estado.posicaoJogador)(posicao)(estado.tamanhoJogador)(tamanho)) colisao();
+		utilidades.desenharObstaculo(ctx)(estado.corAtual)(estado.modificacoes.invertido ? imgInvertida : img)(tamanho)(posicao)(estado.modificacoes.invertido);
+		return {...valor, x: valor.x - estado.fpsVelocidade};
+	}
+
+	const alturaPulo = estado.alturaPulo(tamanhoCanvas.y)(estado.tamanhoJogador.y);
+
+	const posAtualDosObstaculos = estado.posicaoObstaculos.length <= 1 ? estado.posicaoObstaculos.concat(criarObstaculos()) : estado.posicaoObstaculos;
+	const posAtualDasHabilidades = estado.posicaoHabilidades.length == 0 ? estado.posicaoHabilidades.concat(criarHabilidades()) : estado.posicaoHabilidades;
+	const posAtualDasNuvens = estado.posicaoNuvens.length <= 5 ? estado.posicaoNuvens.concat(criarNuvens()) : estado.posicaoNuvens;
+
+	if (estado.pegouHabilidade) {
+		estado.pegouHabilidade = false;
+		estado.modificacoesFuncoes[Math.floor(Math.random() * estado.modificacoesFuncoes.length)](estado);
+	}
+
+	const segundoEstado = {
+		...estado,
+		posicaoObstaculos: utilidades.estaForaDaTela(posAtualDosObstaculos[0].x)(estado.tamanhoObstaculos.x) ? removerPrimeiroElemento(posAtualDosObstaculos) : posAtualDosObstaculos,
+		posicaoHabilidades: utilidades.estaForaDaTela(posAtualDasHabilidades[0].x)(estado.tamanhoHabilidades.x) ? removerPrimeiroElemento(posAtualDasHabilidades) : posAtualDasHabilidades,
+		posicaoNuvens: posAtualDasNuvens.filter((v) => v.posicao.x > -25),
+		corAtual: estado.modificacoes.invertido ? estado.cores.invertida : estado.cores.primaria,
+		habilidadeTimer: Object.entries(estado.modificacoes).filter((v) => v[1]).length === 0 ? 1111 : estado.habilidadeTimer - 1,
+		pegouHabilidade: false
+	}
+
+	// Mapeia os obstáculos para serem impressos e retorna uma nova posição para eles
+	const novaPosicaoObstaculos = segundoEstado.posicaoObstaculos.map((valor) => {
+		const funcaoDeColisao = () => {segundoEstado.perdeu = true; return true};
+		return novaPosicaoElemento(valor)(segundoEstado.velocidade)(assets[2])(assets[4])(segundoEstado.tamanhoObstaculos)(funcaoDeColisao);
 	});
 
 	// Mapeia as habilidades para serem impressos e retorna uma nova posição para elas
-	estado.habilidades = estado.habilidades.map((valor, index) => {
-		const posicao = {x: valor.x * estado.velocidadeInicial, y: valor.y}
-		cenario.desenharHabilidade(ctx)({x: 25, y: 25})(posicao);
+	const novaPosicaoHabilidades = segundoEstado.posicaoHabilidades.map((valor) => {
+		const funcaoDeColisao = () => {segundoEstado.pegouHabilidade = true; return true;}
 
-		// Colisão com habilidade: funcionando
-		if (checarColisao(jogador.posicao)(posicao)(jogador.tamanho)(estado.tamanhoInicialHabilidades)) {
-			/* Sumir Habilidade assim que tocar nela e gerar outra: ainda não está funcionando
-				estado.habilidades = removerPrimeiroElemento(estado.habilidades);
-				estado.habilidades.push(cenario.criarObstaculo((estado.semente() + 1) * 200)(5)(0));
-			*/
-
-			const invencibilidade = () => {
-				Jogador.invencivel = true;
-
-				setTimeout(() => {Jogador.invencivel = false}, 5000);
-			}
-
-			// ListaHabilidades e decidirHabilidade fica em estado ou global?
-			const listaHabilidades = [invencibilidade()];// , inverterJogo()
-			const decidirHabilidade = (lista) => {
-				// Gera um índice aleatório
-				const indiceAleatorio = Math.floor(Math.random() * lista.length);
-				// Usa o índice para acessar o valor aleatório
-				const valorAleatorio = lista[indiceAleatorio];
-				return valorAleatorio;
-			}
-
-			decidirHabilidade(listaHabilidades);
-			// Se invencibilidade() ativada:
-			// Jogador.invencivel = true;
-			// setTimeout(() => { Jogador.invencivel = false }, 5000);
-		}
-
-		return {...valor, x: valor.x - estado.velocidade};
+		return novaPosicaoElemento(valor)(segundoEstado.velocidade)(assets[14])(assets[14])(segundoEstado.tamanhoHabilidades)(funcaoDeColisao);
 	});
 
-	jogador.pular(estado.alturaPulo)(estado.velocidade); // Define a altura do pulo
-	jogador.ir(estado.distanciaAndar)(estado.distanciaAndar);
-	jogador.voltar(estado.distanciaAndar)(estado.distanciaAndar);
-	jogador.desenhar(ctx)(jogador.posicao)(jogador.tamanho); // Imprimir jogador
-	cenario.desenharChao(ctx);
-	// Preparar texto de pontuação
-	const exibirPontuacao = cenario.formatarTexto(ctx)(16)("right")("#FDFCFC");
-	exibirPontuacao.fillText(`PONTUAÇÃO ${pontuacaoNormalizada}`, canvasTamanho.x, 10);
-	ctx.closePath();
-};
+	// Mapeia as nuvens para serem impressos e retorna uma nova posição para elas
+	const novaPosicaoNuvens = segundoEstado.posicaoNuvens.map((valor) => {
+		const altura = valor.posicao.y === 1 ? (Math.floor(Math.random() * (3 - 1 + 1) + 1)) * 20 : valor.posicao.y;
+		const alturaInvertida = posicaoInvertida(segundoEstado)(altura);
 
-/* -------------------------------------------------------------------------- */
-/*                                   EVENTOS                                  */
-/* -------------------------------------------------------------------------- */
+		const nuvens = [assets[5], assets[6], assets[7]]
+		const tipo = valor.tipo - 1 === -1 ? 0 : valor.tipo - 1;
+
+		utilidades.desenharObstaculo(ctx)(estado.corAtual)(estado.modificacoes.invertido ? nuvens[tipo] : nuvens[tipo])({x: 25, y: 25})({...valor.posicao, y: segundoEstado.modificacoes.invertido ? alturaInvertida + 50 : altura})(estado.modificacoes.invertido);
+		return {tipo: valor.tipo === 0 ? Math.floor(Math.random() * nuvens.length) + 1 : valor.tipo, posicao: {x: (valor.posicao.x - 2) - estado.fpsVelocidade * (altura / 100), y: altura}};
+	});
+
+	const atualizarSprite = segundoEstado.spriteAtual >= 75 ? 0 : segundoEstado.spriteAtual + 1;
+	// Const jogadorSpriteAtual = ;
+
+	const estadoFinal = {
+		...segundoEstado,
+		posicaoObstaculos: novaPosicaoObstaculos,
+		posicaoHabilidades: novaPosicaoHabilidades,
+		posicaoNuvens: novaPosicaoNuvens,
+		spriteAtual: atualizarSprite,
+		spriteJogador: atualizarSprite % 25 === 0 ? (segundoEstado.spriteJogador >= 2 ? 0 : segundoEstado.spriteJogador + 1) : segundoEstado.spriteJogador,
+	};
+
+	pular(estadoFinal)({y: alturaPulo})(alturaPulo)(estadoFinal.fpsVelocidade)
+
+	const jogadorSprite = [assets[8], assets[9], assets[10]];
+	const jogadorSpriteInvertido = [assets[11], assets[12], assets[13]];
+
+
+	/*	Jogador */
+	const alturaJogador = 4 + posicaoInvertida(estado)(estadoFinal.posicaoJogador.y) - tamanhoCanvas.y / 2 + estadoFinal.tamanhoJogador.y;
+	const estaInvertido = estadoFinal.modificacoes.invertido;
+	utilidades.desenharObstaculo(ctx)(estadoFinal.corAtual)((estadoFinal.modificacoes.invertido ? jogadorSpriteInvertido : jogadorSprite)[estadoFinal.spriteJogador])(estadoFinal.tamanhoJogador)(estaInvertido ? {...estadoFinal.posicaoJogador, y: alturaJogador < 100 ? 101 : alturaJogador} : {...estadoFinal.posicaoJogador, y: estadoFinal.posicaoJogador.y > 101 ? 99 : estadoFinal.posicaoJogador.y})(estadoFinal.modificacoes.invertido);
+	/* 	Aqui é definido o chão */
+	utilidades.desenharLinha(ctx)(estadoFinal.corAtual)(0)(tamanhoCanvas.x)(tamanhoCanvas.y / 2)(tamanhoCanvas.y / 2)
+	/* 	Imprimir texto de pontuação */
+	utilidades.criarTexto(ctx)(16)(estadoFinal.corAtual)(`PONTUAÇÃO ${pontuacaoNormalizada}`)('right')({x: tamanhoCanvas.x, y: 10})
+	/* 	Imprimir timer de habilidade */
+	if (habilidadeTimerNormalizado !== '11') utilidades.criarTexto(ctx)(16)(estadoFinal.corAtual)(`HABILIDADE ${habilidadeTimerNormalizado == '' ? '0' : habilidadeTimerNormalizado}`)('right')({x: tamanhoCanvas.x, y: 30})
+	return estadoFinal;
+};
 
 // ─── Eventos ─────────────────────────────────────────────────────────────────
 
