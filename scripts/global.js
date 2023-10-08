@@ -373,12 +373,14 @@ const criarEstadoInicial = () => ({
 	faseAtual: 0,
 	fpsVelocidade: 1,
 	habilidadeTimer: 1111,
+	//Lista de Modificações
 	modificacoes: {
 		intangivel: false,
 		invertido: false,
 		vidaExtra: false,
 	},
 	modificacoesFuncoes: [
+		//Modificador de inversão de jogo
 		(estado) => {
 			if (estado.checarModificacoes(estado)) return false;
 			console.log('[HABILIDADE] Invertendo jogo');
@@ -391,11 +393,25 @@ const criarEstadoInicial = () => ({
 			}, 9000);
 			return {...estado, posicaoJogador: {...estado.posicaoJogador, y: jogadorNovoY}};
 		},
+		//Habilidade de vida extra
 		(estado) => {
 			if (estado.checarModificacoes(estado)) return false;
 			console.log('[HABILIDADE] Vida extra');
 			estado.modificacoes.vidaExtra = true;
 			estado.pegouHabilidade = false;
+			return estado;
+		},
+		//Habilidade de intangibilidade
+		(estado) => {
+			if (estado.checarModificacoes(estado)) return false;
+			console.log('[HABILIDADE] Intangivel');
+			estado.modificacoes.intangivel = true;
+			estado.pegouHabilidade = false;
+
+			setTimeout(() => {
+				estado.modificacoes.intangivel = false;
+				return true;
+			}, 9000);
 			return estado;
 		}
 
@@ -548,7 +564,15 @@ const criarFase = (ctx) => (utilidades) => (assets) => (estado) => {
 
 	// Mapeia os obstáculos para serem impressos e retorna uma nova posição para eles
 	const novaPosicaoObstaculos = segundoEstado.posicaoObstaculos.map((valor) => {
-		const funcaoDeColisao = () => {segundoEstado.perdeu = true; return true};
+		const funcaoDeColisao = () => {
+			//Testa se o dino está intangivel
+			if(estado.modificacoes.intangivel == false){
+				segundoEstado.perdeu = true; 
+				return true
+			} else{
+				segundoEstado.perdeu = false;
+				return false}
+		};
 		return novaPosicaoElemento(valor)(segundoEstado.velocidade)(assets[2])(assets[4])(segundoEstado.tamanhoObstaculos)(funcaoDeColisao);
 	});
 
@@ -589,7 +613,7 @@ const criarFase = (ctx) => (utilidades) => (assets) => (estado) => {
 		const {intangivel, invertido, vidaExtra} = estadoFinal.modificacoes;
 		const imprimir = (texto) => utilidades.criarTexto(ctx)(16)(estadoFinal.corAtual)(texto)('right')({x: tamanhoCanvas.x * window.devicePixelRatio, y: 30});
 		if (vidaExtra) imprimir('VIDA EXTRA')
-		if (intangivel) imprimir('INTANGIVEL')
+		if (intangivel) imprimir(`INTANGIVEL ${habilidadeTimerNormalizado == '' ? '0' : habilidadeTimerNormalizado}`)
 		if (invertido) imprimir(`INVERTIDO ${habilidadeTimerNormalizado == '' ? '0' : habilidadeTimerNormalizado}`)
 	}
 
