@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
 
-html, body {
+html,
+body {
   width: 100vw;
   height: 100vh;
   margin: 0px;
@@ -14,15 +15,17 @@ html, body {
 }
 
 canvas {
-    left: 0px;
-    top: 0px;
+  left: 0px;
+  top: 0px;
+  max-width: 600px;
+  max-height: 300px;
 }
 
 canvas text {
-	text-transform: uppercase;
-	fill: red;
-	font-size: 50px;
-	filter: url(#Glow);
+  text-transform: uppercase;
+  fill: red;
+  font-size: 50px;
+  filter: url(#Glow);
 }
 
 .container {
@@ -57,8 +60,7 @@ canvas text {
   pointer-events: none;
   height: 100%;
   width: 100%;
-  background: linear-gradient(
-    rgba(0, 0, 0, 0) 50%,
-    rgba(0, 0, 0, 1) 50%);
+  background: linear-gradient(rgba(0, 0, 0, 0) 50%,
+      rgba(0, 0, 0, 1) 50%);
   background-size: 100% 2px;
 }

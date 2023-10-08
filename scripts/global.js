@@ -516,11 +516,11 @@ const criarFase = (ctx) => (utilidades) => (assets) => (estado) => {
 	const estaInvertido = estadoFinal.modificacoes.invertido;
 	utilidades.desenharObstaculo(ctx)(estadoFinal.corAtual)((estadoFinal.modificacoes.invertido ? jogadorSpriteInvertido : jogadorSprite)[estadoFinal.spriteJogador])(estadoFinal.tamanhoJogador)(estaInvertido ? {...estadoFinal.posicaoJogador, y: alturaJogador < 100 ? 101 : alturaJogador} : {...estadoFinal.posicaoJogador, y: estadoFinal.posicaoJogador.y > 101 ? 99 : estadoFinal.posicaoJogador.y})(estadoFinal.modificacoes.invertido);
 	/* 	Aqui é definido o chão */
-	utilidades.desenharLinha(ctx)(estadoFinal.corAtual)(0)(tamanhoCanvas.x)(tamanhoCanvas.y / 2)(tamanhoCanvas.y / 2)
+	utilidades.desenharLinha(ctx)(estadoFinal.corAtual)(0)(tamanhoCanvas.x * window.devicePixelRatio)(tamanhoCanvas.y / 2)(tamanhoCanvas.y / 2)
 	/* 	Imprimir texto de pontuação */
-	utilidades.criarTexto(ctx)(16)(estadoFinal.corAtual)(`PONTUAÇÃO ${pontuacaoNormalizada}`)('right')({x: tamanhoCanvas.x, y: 10})
+	utilidades.criarTexto(ctx)(16)(estadoFinal.corAtual)(`PONTUAÇÃO ${pontuacaoNormalizada}`)('right')({x: tamanhoCanvas.x * window.devicePixelRatio, y: 10})
 	/* 	Imprimir timer de habilidade */
-	if (habilidadeTimerNormalizado !== '11') utilidades.criarTexto(ctx)(16)(estadoFinal.corAtual)(`HABILIDADE ${habilidadeTimerNormalizado == '' ? '0' : habilidadeTimerNormalizado}`)('right')({x: tamanhoCanvas.x, y: 30})
+	if (habilidadeTimerNormalizado !== '11') utilidades.criarTexto(ctx)(16)(estadoFinal.corAtual)(`HABILIDADE ${habilidadeTimerNormalizado == '' ? '0' : habilidadeTimerNormalizado}`)('right')({x: tamanhoCanvas.x * window.devicePixelRatio, y: 30})
 	return estadoFinal;
 };
 
