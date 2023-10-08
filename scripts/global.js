@@ -25,11 +25,112 @@ const criarImagem = (caminho) => {
 	return imagem;
 };
 
+/*	Função usada para gerar um obstáculo em um local aleatório baseado numa
+	posição de elemento em uma lista, multiplicado por j */
+const criarObstaculo = (i) => (j) => ({x: ((i + 1) / 2 * (j + 200)), y: 1})
+
+/*	Cria e imprime um texto. Não pode ser muito alterado pois nós decidimos
+	padronizar todos os textos */
+const criarTexto = (ctx) => (tamanho) => (cor) => (texto) => (alinhar) => ({x, y}) => {
+	ctx.fillStyle = cor;
+	ctx.textAlign = alinhar;
+	ctx.textBaseline = 'middle';
+	ctx.font = `${tamanho}pt VT323, monospace`;
+	ctx.shadowBlur = 7;
+	ctx.shadowColor = cor;
+	return ctx.fillText(texto, x, y);
+};
+
+/* 	Define o tamanho do canvas para uma escala baseada na taxa de pixels do
+	dispositivo. Essa etapa é necessária para impedir que textos e desenhos
+	fiquem com aspecto borrado e de baixa qualidade. 600x300 é o padrão que
+	decidimos usar */
+const definirTamanhoDoCanvas = (ctx) => (width) => (height) => {
+	const escala = (x) => Math.floor(x * window.devicePixelRatio);
+	ctx.canvas.width = escala(width);
+	ctx.canvas.height = escala(height);
+	return ctx;
+};
+
+/*	Desenhar uma linha reta entre dois pontos */
+const desenharLinha = (ctx) => (cor) => (x1) => (x2) => (y1) => (y2) => {
+	ctx.strokeStyle = cor;
+	ctx.shadowBlur = 7;
+	ctx.shadowColor = cor;
+	ctx.lineWidth = 2;
+	ctx.beginPath();
+	ctx.moveTo(x1, y1);
+	ctx.lineTo(x2, y2);
+	return ctx.stroke();
+}
+
+/*	Permite imprimir tanto obstáculos, quanto habilidades mudando parâmetros */
+const desenharObstaculo = (ctx) => (cor) => (img) => (tamanho) => (posicao) => (invertido) => {
+	ctx.fillStyle = cor;
+	ctx.shadowBlur = 7;
+	ctx.shadowColor = cor;
+	// Ctx.fillRect(posicao.x, posicao.y, tamanho.x, tamanho.y)
+	const desenhar = (ctx) => (posicao) => ctx.drawImage(img, posicao.x, posicao.y, img.width, img.height);
+
+	if (invertido) {
+		ctx.save();
+		ctx.translate(img.width, img.height);
+		ctx.rotate(Math.PI);
+		desenhar(ctx)({x: -posicao.x, y: -posicao.y});
+		return ctx.restore();
+	}
+
+	return desenhar(ctx)({x: posicao.x, y: posicao.y});
+}
+
+/*  Para checar se algo está fora da área de visão, comparamos a posição do
+	elemento com um dos lados do canvas. No caso, usaremos 0, que representa
+	o lado esquerdo da tela.
+
+	Como a posição do objeto é sempre um ponto que representa o lado superior
+	esquerdo do elemento, devemos também diminuir 0 pela largura do objeto
+
+	Por exemplo, se quisermos saber se um objeto de 50px de largura está fora
+	da tela, temos que:
+
+	-	Quando a posição do elemento for 0, o lado esquerdo do elemento está
+		no limite da área de visão
+	-	Quando -50 < posição < 0, o elemento está parcialmente fora do canvas
+	-	Quando a posição < -50, a totalidade do elemento está fora da visão */
+const estaForaDaTela = (posicao) => (tamanho) => posicao < 0 - tamanho;
+
+/*  Usado para preencher listas de obstáculos e habilidades. Deve ser passado
+	como parâmetro, o tamanho e a função que será executada.
+	No caso, nossas funções devem poder receber o index como parâmetro. Isso
+	vai ajudar a ordenar os obstáculos gerados */
+const preencherLista = (tamanho) => (exec) => Array(tamanho).fill().map((_v, index) => exec(index));
+
+/*	Caso necessário alterar proporcionalmente alguma coordenada, será usado
+	o parâmetro `m` como multiplicador e { x, y } as coordenadas tratadas */
+const proporcaoCoordenada = (m) => ({x, y}) => ({x: x * m, y: y * m});
+
+/* 	Para aleatorizar a posição de obstáculos e habilidades, é preciso abrir
+	mão da pureza da função onde esta será implementada */
+const sementeAleatoria = () => Math.floor(Math.random() * 200) + 100;
+
+/*	Consulta o tamanho atual do canvas com base no contexto */
+const tamanhoCanvas = (ctx) => ({x: ctx.canvas.clientWidth, y: ctx.canvas.clientHeight});
+
 /*	Coleção das funções definidas anteriormente */
 const utilidades = {
 	checarColisao,
 	criarAudio,
 	criarImagem,
+	criarObstaculo,
+	criarTexto,
+	definirTamanhoDoCanvas,
+	desenharLinha,
+	desenharObstaculo,
+	estaForaDaTela,
+	preencherLista,
+	proporcaoCoordenada,
+	sementeAleatoria,
+	tamanhoCanvas
 };
 
 // ─── Assets ──────────────────────────────────────────────────────────────────
@@ -59,6 +160,51 @@ const assets = [
 		tipo: 'imagem',
 		nome: 'cactus_2_invertido',
 		caminho: 'assets/image/cactus2_invertido.png',
+	},
+	{
+		tipo: 'imagem',
+		nome: 'nuvem',
+		caminho: 'assets/image/nuvem.png',
+	},
+	{
+		tipo: 'imagem',
+		nome: 'nuvem_1',
+		caminho: 'assets/image/nuvem_1.png',
+	},
+	{
+		tipo: 'imagem',
+		nome: 'nuvem_2',
+		caminho: 'assets/image/nuvem_2.png',
+	},
+	{
+		tipo: 'imagem',
+		nome: 'jogador_0',
+		caminho: 'assets/image/dinossauro/0.png',
+	},
+	{
+		tipo: 'imagem',
+		nome: 'jogador_1',
+		caminho: 'assets/image/dinossauro/1.png',
+	},
+	{
+		tipo: 'imagem',
+		nome: 'jogador_2',
+		caminho: 'assets/image/dinossauro/2.png',
+	},
+	{
+		tipo: 'imagem',
+		nome: 'jogador_0_invertido',
+		caminho: 'assets/image/dinossauro/0_invertido.png',
+	},
+	{
+		tipo: 'imagem',
+		nome: 'jogador_1_invertido',
+		caminho: 'assets/image/dinossauro/1_invertido.png',
+	},
+	{
+		tipo: 'imagem',
+		nome: 'jogador_2_invertido',
+		caminho: 'assets/image/dinossauro/2_invertido.png',
 	},
 	{
 		tipo: 'audio',
@@ -143,26 +289,72 @@ const [perdeuAudio, audioPular, audioAmbiente] = audios;
 /*	Tempo da primeira execução. Necessário para medir a taxa de atualização */
 const tempoAtual = new Date();
 
-const estado_ = Estado;
+const criarEstadoInicial = () => ({
+	alturaPulo: (alturaCanvas) => (alturaJogador) => alturaCanvas / 2 - alturaJogador,
+	animacao: false,
+	corAtual: 'rgb(26, 255, 128)',
+	cores: {
+		primaria: 'rgb(26, 255, 128)',
+		invertida: 'rgb(255, 26, 244)'
+	},
+	faseAtual: 0,
+	fpsVelocidade: 1,
+	habilidadeTimer: 1111,
+	modificacoes: {
+		intangivel: false,
+		invertido: false,
+	},
+	modificacoesFuncoes: [
+		(estado) => {
+			console.log('[HABILIDADE] Invertendo jogo');
+			estado.modificacoes.invertido = true;
+			const jogadorNovoY = estado.alturaPulo(300)(estado.tamanhoJogador.y) + estado.tamanhoJogador.y * 2;
+			setTimeout(() => {
+				estado.modificacoes.invertido = false;
+				return true;
+			}, 9000);
+			return {...estado, posicaoJogador: {...estado.posicaoJogador, y: jogadorNovoY}};
+		},
+		(estado) => {
+			console.log('[HABILIDADE] Destruindo obstáculos');
+			estado.posicaoObstaculos = [];
+			return {...estado, posicaoObstaculos: []};
+		}
+
+	],
+	multiplicadorVelocidade: 1,
+	pausado: false,
+	pegouHabilidade: false,
+	perdeu: false,
+	pontuacaoAtual: 0,
+	posicaoHabilidades: [],
+	posicaoJogador: {x: 50, y: 100},
+	posicaoNuvens: [],
+	posicaoObstaculos: [],
+	pulando: false,
+	spriteAtual: 0,
+	spriteJogador: 0,
+	tamanhoCanvas: {x: 600, y: 300},
+	tamanhoHabilidades: {x: 25, y: 25},
+	tamanhoJogador: {x: 50, y: 50},
+	tamanhoObstaculos: {x: 25, y: 50},
+	velocidade: 3.84,
+});
+
+const estado_ = criarEstadoInicial();
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-/*  Aqui onde é criado o menu principal.
-	Impressão da logo e mensagem. */
-const criarMenu = (ctx) => (logo) => (cenario) => {
-	// If (estado.faseAtual > 0) return;
-	// if (estado.faseAtual > 0) return;
-	cenario.definirTamanho(ctx)(600)(300);
-	const canvasTamanho = cenario.tamanho(ctx); // Tamanho do canvas
-	const canvasCentro = cenario.proporcao(1 / 2)(canvasTamanho); // Centro do canvas
-	const logoDimensoes = cenario.proporcao(1 / (window.devicePixelRatio * 500))({x: logo.width, y: logo.height}); // Dimensões da imagem logo
-	const logoPosicao = cenario.proporcao(1 / 2)(logoDimensoes); // Posição da imagem logo
-	// ctx.drawImage(logo, canvasCentro.x - logoPosicao.x, canvasCentro.y - logoPosicao.y, logoDimensoes.x, logoDimensoes.y); // Imprimir a logo
-	ctx.shadowBlur = 0;
-	ctx.shadowColor = "rgb(26, 255, 128)";
-	ctx.drawImage(logo, logoDimensoes.x, logoDimensoes.y, canvasTamanho.x, canvasTamanho.y);
+/*  Aqui onde é criado o menu principal. Impressão e dimensionamento da logo e canvas */
+const criarMenu = (ctx) => (logo) => (utilidades) => {
+	/*	Para calcular as dimensões da logo, iremos dividir o tamanho original por
+		1 / (taxaDePixels * 500). Isso vai impedir a imagem de ficar com um aspecto
+		borrado, ou diferente da proposta de pixel arte */
+	const logoDimensoes = utilidades.proporcaoCoordenada(1 / (window.devicePixelRatio * 500))({x: logo.width, y: logo.height});
+	const canvas = utilidades.definirTamanhoDoCanvas(ctx)(600)(300);
+	const canvasTamanho = utilidades.tamanhoCanvas(canvas);
 
-	ctx.closePath();
+	return ctx.drawImage(logo, logoDimensoes.x, logoDimensoes.y, canvasTamanho.x, canvasTamanho.y); //	Impressão da logo
 };
 
 // Criar fase: jogador, obstáculos, potuação
@@ -324,52 +516,53 @@ const criarFase = (ctx) => (estado) => (cenario) => (jogador) => {
 /*                                   EVENTOS                                  */
 /* -------------------------------------------------------------------------- */
 
-/* Evento acionado quando uma tecla é pressionada
-	Dentro, podemos gerenciar ações como a de pular,
-	ou iniciar a partida */
-window.addEventListener("keydown", (e) => {
-	if (e.code != "Space" || Estado.faseAtual == -1 || Jogador.estaEmAnimacao || Jogador.estaPulando) return;
-	if (Estado.faseAtual == 0) {
-		document.getElementById("comecarAJogar").style.visibility = "hidden";
-		Estado.faseAtual = 1;
-		musicaAmbiente.play();
-	}
-	else {
-		puloAudio.play();
-		Jogador.estaPulando = true;
-	}
-}, false);
+// ─── Eventos ─────────────────────────────────────────────────────────────────
 
-window.addEventListener("keydown", (e) => {
-	if (e.code == "ArrowRight" && Estado.faseAtual == 1) {
-		puloAudio.play();
-		Jogador.estaIndo = true;
-	}
+/*	Aqui são definidas as funções dos eventos */
+const definirEventos = (evento) => {
+	switch (evento) {
+		case 'resize': return () => estado_.faseAtual == 1 ? document.location.reload() : false;
+		case 'blur': return () => estado_.faseAtual == 1 ? audioAmbiente.pause() : false;
+		case 'focus': return () => estado_.faseAtual == 1 ? audioAmbiente.play() : false;
+		case 'keydown': return (e) => {
+			const apertouEspaco = e.code === 'Space';
+			const estaPulando = estado_.animacao || estado_.pulando;
 
-	if (e.code == "ArrowLeft" && Estado.faseAtual == 1) {
-		puloAudio.play();
-		Jogador.estaVoltando = true;
-	}
-}, false);
+			if (!apertouEspaco || estaPulando) return false;
 
-window.addEventListener("keyup", e => {
-	if (e.code == "ArrowRight" && Estado.faseAtual == 1) {
-		Jogador.estaIndo = false;
-	}
+			/* 	Infelizmente, até o momento não encontramos uma forma de gerenciar
+				estados sem quebrar o paradigma funcional */
+			if (estado_.faseAtual == 1) {
+				estado_.pulando = true;
+				audioPular.pause();
+				audioPular.reiniciar();
+				audioPular.play();
+			}
 
-	if (e.code == "ArrowLeft" && Estado.faseAtual == 1) {
-		Jogador.estaVoltando = false;
-	}
-}, false);
+			if (estado_.faseAtual == 0) {
+				document.getElementById('comecarAJogar').style.visibility = 'hidden';
+				estado_.faseAtual = 1;
+				audioAmbiente.criarLoop();
+				audioAmbiente.play();
+			}
 
-/*  Evento acionado quando a janela é redimensionada
-	Quando alterado o tamanho da página, o cenário
-	deve ser recarregado para evitar erros */
-window.addEventListener("resize", () => {
-	Estado.faseAtual = 0;
-	Jogador.yInicial = Jogador.resetarYInicial();
-	Estado.limparObstaculos();
-}, false);
+			return true;
+		}
+
+		default: return () => false;
+	}
+}
+
+/* 	Evento acionado quando uma tecla é pressionada Dentro, podemos gerenciar
+	ações como a de pular, ou iniciar a partida */
+window.addEventListener('keydown', definirEventos('keydown'), false);
+/*  Evento acionado quando a janela é redimensionada. Quando alterado o tamanho
+	da página, o cenário deve ser recarregado para evitar erros */
+window.addEventListener('resize', definirEventos('resize'), false);
+/*	Evento de quando a página é desfocada, útil para pausar a música */
+window.addEventListener('blur', definirEventos('blur'), false);
+/*	Evento quando o foco volta à página */
+window.addEventListener('focus', definirEventos('focus'), false);
 
 // ─── Loop Do Jogo ────────────────────────────────────────────────────────────
 
