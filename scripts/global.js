@@ -257,6 +257,21 @@ const assets = [
 		caminho: 'assets/image/habilidade_invertido.png',
 	},
 	{
+		tipo: 'imagem',
+		nome: 'nuvem_invertido',
+		caminho: 'assets/image/nuvem_invertido.png',
+	},
+	{
+		tipo: 'imagem',
+		nome: 'nuvem_1_invertido',
+		caminho: 'assets/image/nuvem_1_invertido.png',
+	},
+	{
+		tipo: 'imagem',
+		nome: 'nuvem_2_invertido',
+		caminho: 'assets/image/nuvem_2_invertido.png',
+	},
+	{
 		tipo: 'audio',
 		nome: 'fim_de_jogo',
 		caminho: 'assets/hurt.mp3',
@@ -528,7 +543,7 @@ const criarFase = (ctx) => (utilidades) => (assets) => (estado) => {
 		posicaoHabilidades: utilidades.estaForaDaTela(posAtualDasHabilidades[0].x)(estado.tamanhoHabilidades.x) ? removerPrimeiroElemento(posAtualDasHabilidades) : posAtualDasHabilidades,
 		posicaoNuvens: posAtualDasNuvens.filter((v) => v.posicao.x > -25),
 		corAtual: estado.modificacoes.invertido ? estado.cores.invertida : estado.cores.primaria,
-		habilidadeTimer: estado.checarModificacoes(estado) ? estado.habilidadeTimer - 1 : 1111,
+		habilidadeTimer: estado.checarModificacoes(estado) ? estado.habilidadeTimer - 1 * estado.fpsVelocidade : 1111,
 	}
 
 	// Mapeia os obstáculos para serem impressos e retorna uma nova posição para eles
@@ -549,10 +564,12 @@ const criarFase = (ctx) => (utilidades) => (assets) => (estado) => {
 		const altura = valor.posicao.y === 1 ? (Math.floor(Math.random() * (3 - 1 + 1) + 1)) * 20 : valor.posicao.y;
 		const alturaInvertida = posicaoInvertida(segundoEstado)(altura);
 
-		const nuvens = [assets[5], assets[6], assets[7]]
+		const nuvens = [assets[5], assets[6], assets[7]];
+		const nuvensInvertidas = [assets[16], assets[17], assets[18]];
+
 		const tipo = valor.tipo - 1 === -1 ? 0 : valor.tipo - 1;
 
-		utilidades.desenharObstaculo(ctx)(estado.corAtual)(estado.modificacoes.invertido ? nuvens[tipo] : nuvens[tipo])({x: 25, y: 25})({...valor.posicao, y: segundoEstado.modificacoes.invertido ? alturaInvertida + 50 : altura})(estado.modificacoes.invertido);
+		utilidades.desenharObstaculo(ctx)(estado.corAtual)(estado.modificacoes.invertido ? nuvensInvertidas[tipo] : nuvens[tipo])({x: 25, y: 25})({...valor.posicao, y: segundoEstado.modificacoes.invertido ? alturaInvertida + 50 : altura})(estado.modificacoes.invertido);
 		return {tipo: valor.tipo === 0 ? Math.floor(Math.random() * nuvens.length) + 1 : valor.tipo, posicao: {x: (valor.posicao.x - 2) - estado.fpsVelocidade * (altura / 100), y: altura}};
 	});
 
