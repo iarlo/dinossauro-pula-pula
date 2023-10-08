@@ -1,4 +1,44 @@
+/* eslint-disable complexity */
 /* eslint-disable prettier/prettier */
+/*
+Notas: Ao decorrer do desenvolvimento desse projeto, tentamos de várias
+formas minimizar a quebra do paradigma funcional. É meio complicado fazer
+isso nesse contexto, pois um jogo necessita de gerenciamento de estados.
+
+Foi interessante e ao mesmo tempo desafiador fazer parte desse projeto,
+e antes que seja avaliado o código, gostaria de fazer uma breve introdução
+às nossas escolhas e qual caminho decidimos seguir.
+
+Inicialmente, buscamos referências (Listadas ao fim da nota), mas notamos
+que o gerencialmento de estado quebrava o princípio de imutabilidade. Nós
+decidimos então, abrir mão de alguns princípios em troca de usabilidade.
+Tivemos uma ideia diferente das referências às quais somos gratos, pois
+foi um guia necessário para nós que nunca fizemos um projeto do tipo. No
+meio do desenvolvimento, ao vermos o loop do jogo funcionando, pensamos
+que talvez seria interessante passar o estado como parâmetro da função
+loop, e ao invés de alterar o estado atual, criar um novo a cada chamada.
+Isso preservaria um pouco a imutabilidade, então foi o que decidimos fazer,
+mesmo que não seja totalmente preservada.
+
+Ao criarmos os eventos, notamos que para pular, o estado precisaria ser
+atualizado por fora do loop, quebrando a imutabilidade. Infelizmente, não
+conseguimos encontrar uma solução adequada para resolver isso. Nosso máximo
+foi minimizar os efeitos, passando alguns eventos para dentro do loop. Em
+nossas pesquisas, encontramos uma explicação de como o navegador lida com
+vários eventos identicos sendo criados, e bom, não há leak de memória pois
+o navegador simplesmente exclui ou ignora eventos iguais. Infelizmente isso
+de gerar o evento dentro do loop deu certo para começar o jogo, mas não
+atualizava o estado ao pular. Não encontramos uma solução a tempo e por isso
+voltamos ao simples, definindo eventos no escopo global.
+
+Infelizmente, não foi possível ser totalmente fiel ao paradigma funcional,
+mas tentamos ao máximo.
+
+Referências:
+	- https://github.com/chrokh/fp-games
+	- https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener#Multiple_identical_event_listeners
+*/
+
 const canvas = document.getElementById('dinoPP');
 const ctx = canvas.getContext('2d');
 
@@ -212,6 +252,11 @@ const assets = [
 		caminho: 'assets/image/habilidade.png',
 	},
 	{
+		tipo: 'imagem',
+		nome: 'habilidade_invertido',
+		caminho: 'assets/image/habilidade_invertido.png',
+	},
+	{
 		tipo: 'audio',
 		nome: 'fim_de_jogo',
 		caminho: 'assets/hurt.mp3',
@@ -228,6 +273,12 @@ const assets = [
 		nome: 'ambiente',
 		caminho: 'assets/ambiente.mp3',
 		volume: 0.3,
+	},
+	{
+		tipo: 'audio',
+		nome: 'explosao',
+		caminho: 'assets/explosion.mp3',
+		volume: 0.5,
 	},
 ];
 
@@ -287,7 +338,7 @@ const [imagens, audios] = listaAssets.map((v) =>
 	),
 );
 
-const [perdeuAudio, audioPular, audioAmbiente] = audios;
+const [perdeuAudio, audioPular, audioAmbiente, audioExplosao] = audios;
 
 // ─── Jogo ────────────────────────────────────────────────────────────────────
 
@@ -297,22 +348,27 @@ const tempoAtual = new Date();
 const criarEstadoInicial = () => ({
 	alturaPulo: (alturaCanvas) => (alturaJogador) => alturaCanvas / 2 - alturaJogador,
 	animacao: false,
+	checarModificacoes: (estado) => Object.entries(estado.modificacoes).filter((v) => v[1]).length > 0,
 	corAtual: 'rgb(26, 255, 128)',
 	cores: {
 		primaria: 'rgb(26, 255, 128)',
 		invertida: 'rgb(255, 26, 244)'
 	},
+	descendo: false,
 	faseAtual: 0,
 	fpsVelocidade: 1,
 	habilidadeTimer: 1111,
 	modificacoes: {
 		intangivel: false,
 		invertido: false,
+		vidaExtra: false,
 	},
 	modificacoesFuncoes: [
 		(estado) => {
+			if (estado.checarModificacoes(estado)) return false;
 			console.log('[HABILIDADE] Invertendo jogo');
 			estado.modificacoes.invertido = true;
+			estado.pegouHabilidade = false;
 			const jogadorNovoY = estado.alturaPulo(300)(estado.tamanhoJogador.y) + estado.tamanhoJogador.y * 2;
 			setTimeout(() => {
 				estado.modificacoes.invertido = false;
@@ -321,9 +377,11 @@ const criarEstadoInicial = () => ({
 			return {...estado, posicaoJogador: {...estado.posicaoJogador, y: jogadorNovoY}};
 		},
 		(estado) => {
-			console.log('[HABILIDADE] Destruindo obstáculos');
-			estado.posicaoObstaculos = [];
-			return {...estado, posicaoObstaculos: []};
+			if (estado.checarModificacoes(estado)) return false;
+			console.log('[HABILIDADE] Vida extra');
+			estado.modificacoes.vidaExtra = true;
+			estado.pegouHabilidade = false;
+			return estado;
 		}
 
 	],
@@ -341,8 +399,8 @@ const criarEstadoInicial = () => ({
 	spriteJogador: 0,
 	tamanhoCanvas: {x: 600, y: 300},
 	tamanhoHabilidades: {x: 25, y: 25},
-	tamanhoJogador: {x: 50, y: 50},
-	tamanhoObstaculos: {x: 25, y: 50},
+	tamanhoJogador: {x: 25, y: 45},
+	tamanhoObstaculos: {x: 15, y: 50},
 	velocidade: 3.84,
 });
 
@@ -391,19 +449,17 @@ const criarFase = (ctx) => (utilidades) => (assets) => (estado) => {
 	/* 	As duas funções a seguir retornam uma lista com `n` elementos, representando
 		obstáculos ou habilidades */
 	const criarObstaculos = () => utilidades.preencherLista(5)((index) => utilidades.criarObstaculo(index)(utilidades.sementeAleatoria()));
-	const criarHabilidades = () => utilidades.preencherLista(1)(() => utilidades.criarObstaculo(2)(utilidades.sementeAleatoria() * 3));
+	const criarHabilidades = () => utilidades.preencherLista(1)(() => utilidades.criarObstaculo(2)(utilidades.sementeAleatoria() * estado.velocidade));
 	const criarNuvens = () => utilidades.preencherLista(5)((index) => (utilidades.criarObstaculo(index + 3)(utilidades.sementeAleatoria() * 2))).map((v) => ({tipo: 0, posicao: v}));
-
 	/* 	Define a função de pular */
 	const pular = (estado) => (posicaoInicial) => (altura) => (velocidade) => {
-		const {pulando} = estado_;
-		const pos = {...estado.posicaoJogador, y: estado.modificacoes.invertido ? (estado.posicaoJogador.y < 100 ? 100 : estado.posicaoJogador.y) : (estado.posicaoJogador.y > 100 ? 100 : estado.posicaoJogador.y)};
+		const {pulando, descendo} = estado_;
+		const pos = {...estado.posicaoJogador, y: estado.modificacoes.invertido ? (estado.posicaoJogador.y < 105 ? 105 : estado.posicaoJogador.y) : (estado.posicaoJogador.y > 105 ? 105 : estado.posicaoJogador.y)};
 		const {invertido} = estado.modificacoes;
 		const deltaPosicao = 4 * velocidade;
 		const subir = {...pos, y: pos.y - deltaPosicao};
-		const descer = {...pos, y: pos.y + deltaPosicao};
+		const descer = {...pos, y: pos.y + deltaPosicao * (descendo ? 1.3 : 1)};
 		const posInicial = posicaoInicial.y + (invertido ? estado.tamanhoJogador.y : 0);
-
 		const comecouPulo = invertido
 			? pulando && pos.y < posInicial + altura - estado.tamanhoJogador.y + 3
 			: pulando && pos.y > posInicial - altura;
@@ -415,13 +471,19 @@ const criarFase = (ctx) => (utilidades) => (assets) => (estado) => {
 		const pontoLimite = invertido
 			? pos.y >= posInicial + altura - estado.tamanhoJogador.y
 			: pos.y <= posInicial - altura;
+
+		if (descendo) estado_.pulando = false;
+
 		if (comecouPulo) {
 			estado_.animacao = true;
 			estado.posicaoJogador = invertido ? descer : subir;
 		}
 
 		if (estaNoAr) {
-			if (pontoLimite) setTimeout(() => {estado_.pulando = false; return true;}, 150);
+			if (pontoLimite) {
+				setTimeout(() => {estado_.pulando = false; return true;}, 150);
+			}
+
 			if (!pulando) estado.posicaoJogador = invertido ? subir : descer;
 		}
 
@@ -429,9 +491,10 @@ const criarFase = (ctx) => (utilidades) => (assets) => (estado) => {
 			? pos.y == posInicial - estado.tamanhoJogador.y
 			: pos.y == posInicial;
 
-		if (estaNoChao) estado_.animacao = false;
-
-		console.log(posInicial - estado.tamanhoJogador.y, posInicial)
+		if (estaNoChao) {
+			estado_.animacao = false;
+			estado_.descendo = false;
+		}
 
 		return estado;
 	}
@@ -442,7 +505,7 @@ const criarFase = (ctx) => (utilidades) => (assets) => (estado) => {
 	/* 	Gera e retorna uma nova posição, além de senhar o elemento  */
 	const novaPosicaoElemento = (valor) => (velocidade) => (img) => (imgInvertida) => (tamanho) => (colisao) => {
 		const posicao = {x: valor.x * velocidade, y: estado.modificacoes.invertido ? posicaoInvertida(estado)(valor.y) : tamanhoCanvas.y / 2 - tamanho.y};
-		if (utilidades.checarColisao(estado.posicaoJogador)(posicao)(estado.tamanhoJogador)(tamanho)) colisao();
+		if (utilidades.checarColisao(estado.posicaoJogador)(estado.modificacoes.invertido ? {...posicao, y: posicao.y - tamanho.y} : posicao)(estado.tamanhoJogador)(tamanho)) colisao();
 		utilidades.desenharObstaculo(ctx)(estado.corAtual)(estado.modificacoes.invertido ? imgInvertida : img)(tamanho)(posicao)(estado.modificacoes.invertido);
 		return {...valor, x: valor.x - estado.fpsVelocidade};
 	}
@@ -460,12 +523,12 @@ const criarFase = (ctx) => (utilidades) => (assets) => (estado) => {
 
 	const segundoEstado = {
 		...estado,
+		velocidade: estado.velocidade + estado.pontuacaoAtual / 10000000,
 		posicaoObstaculos: utilidades.estaForaDaTela(posAtualDosObstaculos[0].x)(estado.tamanhoObstaculos.x) ? removerPrimeiroElemento(posAtualDosObstaculos) : posAtualDosObstaculos,
 		posicaoHabilidades: utilidades.estaForaDaTela(posAtualDasHabilidades[0].x)(estado.tamanhoHabilidades.x) ? removerPrimeiroElemento(posAtualDasHabilidades) : posAtualDasHabilidades,
 		posicaoNuvens: posAtualDasNuvens.filter((v) => v.posicao.x > -25),
 		corAtual: estado.modificacoes.invertido ? estado.cores.invertida : estado.cores.primaria,
-		habilidadeTimer: Object.entries(estado.modificacoes).filter((v) => v[1]).length === 0 ? 1111 : estado.habilidadeTimer - 1,
-		pegouHabilidade: false
+		habilidadeTimer: estado.checarModificacoes(estado) ? estado.habilidadeTimer - 1 : 1111,
 	}
 
 	// Mapeia os obstáculos para serem impressos e retorna uma nova posição para eles
@@ -478,7 +541,7 @@ const criarFase = (ctx) => (utilidades) => (assets) => (estado) => {
 	const novaPosicaoHabilidades = segundoEstado.posicaoHabilidades.map((valor) => {
 		const funcaoDeColisao = () => {segundoEstado.pegouHabilidade = true; return true;}
 
-		return novaPosicaoElemento(valor)(segundoEstado.velocidade)(assets[14])(assets[14])(segundoEstado.tamanhoHabilidades)(funcaoDeColisao);
+		return novaPosicaoElemento(valor)(segundoEstado.velocidade)(assets[15])(assets[15])(segundoEstado.tamanhoHabilidades)(funcaoDeColisao);
 	});
 
 	// Mapeia as nuvens para serem impressos e retorna uma nova posição para elas
@@ -494,7 +557,6 @@ const criarFase = (ctx) => (utilidades) => (assets) => (estado) => {
 	});
 
 	const atualizarSprite = segundoEstado.spriteAtual >= 75 ? 0 : segundoEstado.spriteAtual + 1;
-	// Const jogadorSpriteAtual = ;
 
 	const estadoFinal = {
 		...segundoEstado,
@@ -505,22 +567,27 @@ const criarFase = (ctx) => (utilidades) => (assets) => (estado) => {
 		spriteJogador: atualizarSprite % 25 === 0 ? (segundoEstado.spriteJogador >= 2 ? 0 : segundoEstado.spriteJogador + 1) : segundoEstado.spriteJogador,
 	};
 
-	pular(estadoFinal)({y: alturaPulo})(alturaPulo)(estadoFinal.fpsVelocidade)
-
-	const jogadorSprite = [assets[8], assets[9], assets[10]];
-	const jogadorSpriteInvertido = [assets[11], assets[12], assets[13]];
-
+	if (estadoFinal.checarModificacoes(estadoFinal)) {
+		/* 	Imprimir timer de habilidade */
+		const {intangivel, invertido, vidaExtra} = estadoFinal.modificacoes;
+		const imprimir = (texto) => utilidades.criarTexto(ctx)(16)(estadoFinal.corAtual)(texto)('right')({x: tamanhoCanvas.x * window.devicePixelRatio, y: 30});
+		if (vidaExtra) imprimir('VIDA EXTRA')
+		if (intangivel) imprimir('INTANGIVEL')
+		if (invertido) imprimir(`INVERTIDO ${habilidadeTimerNormalizado == '' ? '0' : habilidadeTimerNormalizado}`)
+	}
 
 	/*	Jogador */
+	pular(estadoFinal)({y: alturaPulo})(alturaPulo)(estadoFinal.fpsVelocidade);
+	const jogadorSprite = [assets[8], assets[9], assets[10]];
+	const jogadorSpriteInvertido = [assets[11], assets[12], assets[13]];
 	const alturaJogador = 4 + posicaoInvertida(estado)(estadoFinal.posicaoJogador.y) - tamanhoCanvas.y / 2 + estadoFinal.tamanhoJogador.y;
 	const estaInvertido = estadoFinal.modificacoes.invertido;
 	utilidades.desenharObstaculo(ctx)(estadoFinal.corAtual)((estadoFinal.modificacoes.invertido ? jogadorSpriteInvertido : jogadorSprite)[estadoFinal.spriteJogador])(estadoFinal.tamanhoJogador)(estaInvertido ? {...estadoFinal.posicaoJogador, y: alturaJogador < 100 ? 101 : alturaJogador} : {...estadoFinal.posicaoJogador, y: estadoFinal.posicaoJogador.y > 101 ? 99 : estadoFinal.posicaoJogador.y})(estadoFinal.modificacoes.invertido);
+
 	/* 	Aqui é definido o chão */
 	utilidades.desenharLinha(ctx)(estadoFinal.corAtual)(0)(tamanhoCanvas.x * window.devicePixelRatio)(tamanhoCanvas.y / 2)(tamanhoCanvas.y / 2)
 	/* 	Imprimir texto de pontuação */
 	utilidades.criarTexto(ctx)(16)(estadoFinal.corAtual)(`PONTUAÇÃO ${pontuacaoNormalizada}`)('right')({x: tamanhoCanvas.x * window.devicePixelRatio, y: 10})
-	/* 	Imprimir timer de habilidade */
-	if (habilidadeTimerNormalizado !== '11') utilidades.criarTexto(ctx)(16)(estadoFinal.corAtual)(`HABILIDADE ${habilidadeTimerNormalizado == '' ? '0' : habilidadeTimerNormalizado}`)('right')({x: tamanhoCanvas.x * window.devicePixelRatio, y: 30})
 	return estadoFinal;
 };
 
@@ -534,24 +601,29 @@ const definirEventos = (evento) => {
 		case 'focus': return () => estado_.faseAtual == 1 ? audioAmbiente.play() : false;
 		case 'keydown': return (e) => {
 			const apertouEspaco = e.code === 'Space';
+			const apertouDescer = e.code === 'KeyS' || e.code === 'ArrowDown';
 			const estaPulando = estado_.animacao || estado_.pulando;
 
-			if (!apertouEspaco || estaPulando) return false;
+			if (!apertouEspaco && !apertouDescer && estaPulando) return false;
 
 			/* 	Infelizmente, até o momento não encontramos uma forma de gerenciar
 				estados sem quebrar o paradigma funcional */
-			if (estado_.faseAtual == 1) {
+			if (apertouEspaco && !estaPulando && estado_.faseAtual == 1) {
 				estado_.pulando = true;
 				audioPular.pause();
 				audioPular.reiniciar();
 				audioPular.play();
 			}
 
-			if (estado_.faseAtual == 0) {
+			if (apertouEspaco && !estaPulando && estado_.faseAtual == 0) {
 				document.getElementById('comecarAJogar').style.visibility = 'hidden';
 				estado_.faseAtual = 1;
 				audioAmbiente.criarLoop();
 				audioAmbiente.play();
+			}
+
+			if (apertouDescer && estaPulando) {
+				estado_.descendo = true;
 			}
 
 			return true;
@@ -599,10 +671,18 @@ const loopJogo = (estadoInicial) => (tempoAtual) => (assets) => (menu) => (fase)
 
 	/* 	Se o jogador perder, a página é reiniciada */
 	if (estadoInicial.perdeu) {
-		assets.audio.audioAmbiente.pause();
-		assets.audio.perdeuAudio.play();
-		estadoInicial.pausado = true;
-		setTimeout(() => document.location.reload(), 1000);
+		if (estadoInicial.modificacoes.vidaExtra) {
+			assets.audio.audioExplosao.play();
+			estadoInicial.posicaoObstaculos = [];
+			estadoInicial.modificacoes.vidaExtra = false;
+			estadoInicial.perdeu = false;
+		}
+		else {
+			assets.audio.audioAmbiente.pause();
+			assets.audio.perdeuAudio.play();
+			estadoInicial.pausado = true;
+			setTimeout(() => document.location.reload(), 1000);
+		}
 	}
 
 	/* 	Se o jogo estiver pausado, o loop também será */
@@ -647,4 +727,4 @@ const loopJogo = (estadoInicial) => (tempoAtual) => (assets) => (menu) => (fase)
 	const fase = criarFase(ctx)(utilidades)(imagens);
 
 	return window.requestAnimationFrame(loop(menu)(fase));
-})(imagens)({perdeuAudio, audioPular, audioAmbiente})()
+})(imagens)({perdeuAudio, audioPular, audioAmbiente, audioExplosao})();
