@@ -67,11 +67,11 @@ const criarImagem = (caminho) => {
 
 /*	Função usada para gerar um obstáculo em um local aleatório baseado numa
 	posição de elemento em uma lista, multiplicado por j */
-const criarObstaculo = (i) => (j) => ({x: ((i + 1) / 2 * (j + 200)), y: 1})
+const criarObstaculo = (i) => (j) => ({ x: ((i + 1) / 2 * (j + 200)), y: 1 })
 
 /*	Cria e imprime um texto. Não pode ser muito alterado pois nós decidimos
 	padronizar todos os textos */
-const criarTexto = (ctx) => (tamanho) => (cor) => (texto) => (alinhar) => ({x, y}) => {
+const criarTexto = (ctx) => (tamanho) => (cor) => (texto) => (alinhar) => ({ x, y }) => {
 	ctx.fillStyle = cor;
 	ctx.textAlign = alinhar;
 	ctx.textBaseline = 'middle';
@@ -116,11 +116,11 @@ const desenharObstaculo = (ctx) => (cor) => (img) => (tamanho) => (posicao) => (
 		ctx.save();
 		ctx.translate(img.width, img.height);
 		ctx.rotate(Math.PI);
-		desenhar(ctx)({x: -posicao.x, y: -posicao.y});
+		desenhar(ctx)({ x: -posicao.x, y: -posicao.y });
 		return ctx.restore();
 	}
 
-	return desenhar(ctx)({x: posicao.x, y: posicao.y});
+	return desenhar(ctx)({ x: posicao.x, y: posicao.y });
 }
 
 /*  Para checar se algo está fora da área de visão, comparamos a posição do
@@ -147,14 +147,14 @@ const preencherLista = (tamanho) => (exec) => Array(tamanho).fill().map((_v, ind
 
 /*	Caso necessário alterar proporcionalmente alguma coordenada, será usado
 	o parâmetro `m` como multiplicador e { x, y } as coordenadas tratadas */
-const proporcaoCoordenada = (m) => ({x, y}) => ({x: x * m, y: y * m});
+const proporcaoCoordenada = (m) => ({ x, y }) => ({ x: x * m, y: y * m });
 
 /* 	Para aleatorizar a posição de obstáculos e habilidades, é preciso abrir
 	mão da pureza da função onde esta será implementada */
 const sementeAleatoria = () => Math.floor(Math.random() * 200) + 100;
 
 /*	Consulta o tamanho atual do canvas com base no contexto */
-const tamanhoCanvas = (ctx) => ({x: ctx.canvas.clientWidth, y: ctx.canvas.clientHeight});
+const tamanhoCanvas = (ctx) => ({ x: ctx.canvas.clientWidth, y: ctx.canvas.clientHeight });
 
 /*	Coleção das funções definidas anteriormente */
 const utilidades = {
@@ -302,7 +302,7 @@ const assets = [
 /*	Caso necessário repetir automaticamente um áudio. Usado principalmente
 	em sons ambientes. */
 const adicionarFuncaoLoop = (audio) => Object.assign(audio, {
-	criarLoop() {return Object.assign(audio, {loop: true});}
+	criarLoop() { return Object.assign(audio, { loop: true }); }
 });
 
 /*	Reiniciar o áudio é importante em certas situações
@@ -311,12 +311,12 @@ const adicionarFuncaoLoop = (audio) => Object.assign(audio, {
 	seja executada novamente. Isso impediria que o segundo áudio iniciasse
 	Portanto, espera-se que seja reiniciado antes de executar */
 const adicionarFuncaoRepetir = (audio) => Object.assign(audio, {
-	reiniciar() {return Object.assign(audio, {currentTime: 0});}
+	reiniciar() { return Object.assign(audio, { currentTime: 0 }); }
 });
 
 
 /*	Altera o volume de algum áudio para o parâmetro adicionado */
-const normalizarVolume = (volume) => (audio) => Object.assign(audio, {volume})
+const normalizarVolume = (volume) => (audio) => Object.assign(audio, { volume })
 
 /*	Recebe uma lista de modificadores e os executa no áudio. Em tese, vão
 	ser usadas as funções `adicionarFuncaoLoop`, `adicionarFuncaoRepetir` e
@@ -378,9 +378,10 @@ const criarEstadoInicial = () => ({
 		intangivel: false,
 		invertido: false,
 		vidaExtra: false,
+		setasDesbloqueadas: false,
 	},
 	modificacoesFuncoes: [
-		//Modificador de inversão de jogo
+		// //Modificador de inversão de jogo
 		(estado) => {
 			if (estado.checarModificacoes(estado)) return false;
 			console.log('[HABILIDADE] Invertendo jogo');
@@ -391,7 +392,7 @@ const criarEstadoInicial = () => ({
 				estado.modificacoes.invertido = false;
 				return true;
 			}, 9000);
-			return {...estado, posicaoJogador: {...estado.posicaoJogador, y: jogadorNovoY}};
+			return { ...estado, posicaoJogador: { ...estado.posicaoJogador, y: jogadorNovoY } };
 		},
 		//Habilidade de vida extra
 		(estado) => {
@@ -413,8 +414,35 @@ const criarEstadoInicial = () => ({
 				return true;
 			}, 9000);
 			return estado;
-		}
+		},
+		//Habilidade de se locomover para frente e para trás
+		(estado) => {
+			if (estado.checarModificacoes(estado)) return false;
+			console.log('[HABILIDADE] Setas Desbloqueadas');
+			estado.modificacoes.setasDesbloqueadas = true;
 
+			const eventoHandler = (tipo) => (e) => {
+				if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+					estado_.indo = tipo === 'keydown' ? true : false;
+				}
+				if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+					estado_.voltando = tipo === 'keydown' ? true : false;
+				}
+			}
+
+			const pressionou = eventoHandler('keydown');
+			const soltou = eventoHandler('keyup');
+
+			window.addEventListener('keydown', pressionou);
+			window.addEventListener('keyup', soltou);
+
+			setTimeout(() => {
+				estado.modificacoes.setasDesbloqueadas = false;
+				window.removeEventListener('keydown', pressionou);
+				window.removeEventListener('keyup', soltou);
+				return true;
+			}, 9000);
+		}
 	],
 	multiplicadorVelocidade: 1,
 	pausado: false,
@@ -422,16 +450,18 @@ const criarEstadoInicial = () => ({
 	perdeu: false,
 	pontuacaoAtual: 0,
 	posicaoHabilidades: [],
-	posicaoJogador: {x: 50, y: 100},
+	posicaoJogador: { x: 50, y: 100 },
 	posicaoNuvens: [],
 	posicaoObstaculos: [],
 	pulando: false,
+	indo: false,
+	voltando: false,
 	spriteAtual: 0,
 	spriteJogador: 0,
-	tamanhoCanvas: {x: 600, y: 300},
-	tamanhoHabilidades: {x: 25, y: 25},
-	tamanhoJogador: {x: 25, y: 45},
-	tamanhoObstaculos: {x: 15, y: 50},
+	tamanhoCanvas: { x: 600, y: 300 },
+	tamanhoHabilidades: { x: 25, y: 25 },
+	tamanhoJogador: { x: 25, y: 45 },
+	tamanhoObstaculos: { x: 15, y: 50 },
 	velocidade: 3.84,
 });
 
@@ -444,7 +474,7 @@ const criarMenu = (ctx) => (logo) => (utilidades) => {
 	/*	Para calcular as dimensões da logo, iremos dividir o tamanho original por
 		1 / (taxaDePixels * 500). Isso vai impedir a imagem de ficar com um aspecto
 		borrado, ou diferente da proposta de pixel arte */
-	const logoDimensoes = utilidades.proporcaoCoordenada(1 / (window.devicePixelRatio * 500))({x: logo.width, y: logo.height});
+	const logoDimensoes = utilidades.proporcaoCoordenada(1 / (window.devicePixelRatio * 500))({ x: logo.width, y: logo.height });
 	const canvas = utilidades.definirTamanhoDoCanvas(ctx)(600)(300);
 	const canvasTamanho = utilidades.tamanhoCanvas(canvas);
 
@@ -481,15 +511,15 @@ const criarFase = (ctx) => (utilidades) => (assets) => (estado) => {
 		obstáculos ou habilidades */
 	const criarObstaculos = () => utilidades.preencherLista(5)((index) => utilidades.criarObstaculo(index)(utilidades.sementeAleatoria()));
 	const criarHabilidades = () => utilidades.preencherLista(1)(() => utilidades.criarObstaculo(2)(utilidades.sementeAleatoria() * estado.velocidade));
-	const criarNuvens = () => utilidades.preencherLista(5)((index) => (utilidades.criarObstaculo(index + 3)(utilidades.sementeAleatoria() * 2))).map((v) => ({tipo: 0, posicao: v}));
+	const criarNuvens = () => utilidades.preencherLista(5)((index) => (utilidades.criarObstaculo(index + 3)(utilidades.sementeAleatoria() * 2))).map((v) => ({ tipo: 0, posicao: v }));
 	/* 	Define a função de pular */
 	const pular = (estado) => (posicaoInicial) => (altura) => (velocidade) => {
-		const {pulando, descendo} = estado_;
-		const pos = {...estado.posicaoJogador, y: estado.modificacoes.invertido ? (estado.posicaoJogador.y < 105 ? 105 : estado.posicaoJogador.y) : (estado.posicaoJogador.y > 105 ? 105 : estado.posicaoJogador.y)};
-		const {invertido} = estado.modificacoes;
+		const { pulando, descendo } = estado_;
+		const pos = { ...estado.posicaoJogador, y: estado.modificacoes.invertido ? (estado.posicaoJogador.y < 105 ? 105 : estado.posicaoJogador.y) : (estado.posicaoJogador.y > 105 ? 105 : estado.posicaoJogador.y) };
+		const { invertido } = estado.modificacoes;
 		const deltaPosicao = 4 * velocidade;
-		const subir = {...pos, y: pos.y - deltaPosicao};
-		const descer = {...pos, y: pos.y + deltaPosicao * (descendo ? 1.3 : 1)};
+		const subir = { ...pos, y: pos.y - deltaPosicao };
+		const descer = { ...pos, y: pos.y + deltaPosicao * (descendo ? 1.3 : 1) };
 		const posInicial = posicaoInicial.y + (invertido ? estado.tamanhoJogador.y : 0);
 		const comecouPulo = invertido
 			? pulando && pos.y < posInicial + altura - estado.tamanhoJogador.y + 3
@@ -512,7 +542,7 @@ const criarFase = (ctx) => (utilidades) => (assets) => (estado) => {
 
 		if (estaNoAr) {
 			if (pontoLimite) {
-				setTimeout(() => {estado_.pulando = false; return true;}, 150);
+				setTimeout(() => { estado_.pulando = false; return true; }, 150);
 			}
 
 			if (!pulando) estado.posicaoJogador = invertido ? subir : descer;
@@ -530,15 +560,28 @@ const criarFase = (ctx) => (utilidades) => (assets) => (estado) => {
 		return estado;
 	}
 
+	const andar = (estado) => (velocidade) => (posicaoInicial) => (limite) => {
+		const mover = (posInicial) => (quantoMover) => ({ x: posInicial.x + quantoMover.x, y: posInicial.y + quantoMover.y });
+
+		const indo = estado_.indo;
+		const voltando = estado_.voltando;
+
+
+		if (!estado.modificacoes.setasDesbloqueadas) return { ...posicaoInicial, x: 50 };
+		if (!indo && !voltando) return posicaoInicial;
+
+		return mover(posicaoInicial)({ x: (indo ? (posicaoInicial.x >= limite ? 0 : 4) : (posicaoInicial.x <= 0 ? 0 : -4)) * velocidade, y: 0 });
+	}
+
 	/*	Gera uma nova posição para elementos quando `inverter` está ativado */
 	const posicaoInvertida = (estado) => (altura) => estado.tamanhoCanvas.y / 2 + altura
 
 	/* 	Gera e retorna uma nova posição, além de senhar o elemento  */
 	const novaPosicaoElemento = (valor) => (velocidade) => (img) => (imgInvertida) => (tamanho) => (colisao) => {
-		const posicao = {x: valor.x * velocidade, y: estado.modificacoes.invertido ? posicaoInvertida(estado)(valor.y) : tamanhoCanvas.y / 2 - tamanho.y};
-		if (utilidades.checarColisao(estado.posicaoJogador)(estado.modificacoes.invertido ? {...posicao, y: posicao.y - tamanho.y} : posicao)(estado.tamanhoJogador)(tamanho)) colisao();
+		const posicao = { x: valor.x * velocidade, y: estado.modificacoes.invertido ? posicaoInvertida(estado)(valor.y) : tamanhoCanvas.y / 2 - tamanho.y };
+		if (utilidades.checarColisao(estado.posicaoJogador)(estado.modificacoes.invertido ? { ...posicao, y: posicao.y - tamanho.y } : posicao)(estado.tamanhoJogador)(tamanho)) colisao();
 		utilidades.desenharObstaculo(ctx)(estado.corAtual)(estado.modificacoes.invertido ? imgInvertida : img)(tamanho)(posicao)(estado.modificacoes.invertido);
-		return {...valor, x: valor.x - estado.fpsVelocidade};
+		return { ...valor, x: valor.x - estado.fpsVelocidade };
 	}
 
 	const alturaPulo = estado.alturaPulo(tamanhoCanvas.y)(estado.tamanhoJogador.y);
@@ -566,19 +609,20 @@ const criarFase = (ctx) => (utilidades) => (assets) => (estado) => {
 	const novaPosicaoObstaculos = segundoEstado.posicaoObstaculos.map((valor) => {
 		const funcaoDeColisao = () => {
 			//Testa se o dino está intangivel
-			if(estado.modificacoes.intangivel == false){
-				segundoEstado.perdeu = true; 
+			if (estado.modificacoes.intangivel == false) {
+				segundoEstado.perdeu = true;
 				return true
-			} else{
+			} else {
 				segundoEstado.perdeu = false;
-				return false}
+				return false
+			}
 		};
 		return novaPosicaoElemento(valor)(segundoEstado.velocidade)(assets[2])(assets[4])(segundoEstado.tamanhoObstaculos)(funcaoDeColisao);
 	});
 
 	// Mapeia as habilidades para serem impressos e retorna uma nova posição para elas
 	const novaPosicaoHabilidades = segundoEstado.posicaoHabilidades.map((valor) => {
-		const funcaoDeColisao = () => {segundoEstado.pegouHabilidade = true; return true;}
+		const funcaoDeColisao = () => { segundoEstado.pegouHabilidade = true; return true; }
 
 		return novaPosicaoElemento(valor)(segundoEstado.velocidade)(assets[15])(assets[15])(segundoEstado.tamanhoHabilidades)(funcaoDeColisao);
 	});
@@ -593,8 +637,8 @@ const criarFase = (ctx) => (utilidades) => (assets) => (estado) => {
 
 		const tipo = valor.tipo - 1 === -1 ? 0 : valor.tipo - 1;
 
-		utilidades.desenharObstaculo(ctx)(estado.corAtual)(estado.modificacoes.invertido ? nuvensInvertidas[tipo] : nuvens[tipo])({x: 25, y: 25})({...valor.posicao, y: segundoEstado.modificacoes.invertido ? alturaInvertida + 50 : altura})(estado.modificacoes.invertido);
-		return {tipo: valor.tipo === 0 ? Math.floor(Math.random() * nuvens.length) + 1 : valor.tipo, posicao: {x: (valor.posicao.x - 2) - estado.fpsVelocidade * (altura / 100), y: altura}};
+		utilidades.desenharObstaculo(ctx)(estado.corAtual)(estado.modificacoes.invertido ? nuvensInvertidas[tipo] : nuvens[tipo])({ x: 25, y: 25 })({ ...valor.posicao, y: segundoEstado.modificacoes.invertido ? alturaInvertida + 50 : altura })(estado.modificacoes.invertido);
+		return { tipo: valor.tipo === 0 ? Math.floor(Math.random() * nuvens.length) + 1 : valor.tipo, posicao: { x: (valor.posicao.x - 2) - estado.fpsVelocidade * (altura / 100), y: altura } };
 	});
 
 	const atualizarSprite = segundoEstado.spriteAtual >= 75 ? 0 : segundoEstado.spriteAtual + 1;
@@ -603,32 +647,35 @@ const criarFase = (ctx) => (utilidades) => (assets) => (estado) => {
 		...segundoEstado,
 		posicaoObstaculos: novaPosicaoObstaculos,
 		posicaoHabilidades: novaPosicaoHabilidades,
+		posicaoJogador: andar(segundoEstado)(segundoEstado.fpsVelocidade)(segundoEstado.posicaoJogador)(tamanhoCanvas.x / 2),
 		posicaoNuvens: novaPosicaoNuvens,
 		spriteAtual: atualizarSprite,
 		spriteJogador: atualizarSprite % 25 === 0 ? (segundoEstado.spriteJogador >= 2 ? 0 : segundoEstado.spriteJogador + 1) : segundoEstado.spriteJogador,
 	};
 
+
 	if (estadoFinal.checarModificacoes(estadoFinal)) {
 		/* 	Imprimir timer de habilidade */
-		const {intangivel, invertido, vidaExtra} = estadoFinal.modificacoes;
-		const imprimir = (texto) => utilidades.criarTexto(ctx)(16)(estadoFinal.corAtual)(texto)('right')({x: tamanhoCanvas.x * window.devicePixelRatio, y: 30});
+		const { intangivel, invertido, vidaExtra, setasDesbloqueadas } = estadoFinal.modificacoes;
+		const imprimir = (texto) => utilidades.criarTexto(ctx)(16)(estadoFinal.corAtual)(texto)('right')({ x: tamanhoCanvas.x * window.devicePixelRatio, y: 30 });
 		if (vidaExtra) imprimir('VIDA EXTRA')
 		if (intangivel) imprimir(`INTANGIVEL ${habilidadeTimerNormalizado == '' ? '0' : habilidadeTimerNormalizado}`)
 		if (invertido) imprimir(`INVERTIDO ${habilidadeTimerNormalizado == '' ? '0' : habilidadeTimerNormalizado}`)
+		if (setasDesbloqueadas) imprimir(`SETAS LIVRES ${habilidadeTimerNormalizado == '' ? '0' : habilidadeTimerNormalizado}`)
 	}
 
 	/*	Jogador */
-	pular(estadoFinal)({y: alturaPulo})(alturaPulo)(estadoFinal.fpsVelocidade);
+	pular(estadoFinal)({ y: alturaPulo })(alturaPulo)(estadoFinal.fpsVelocidade);
 	const jogadorSprite = [assets[8], assets[9], assets[10]];
 	const jogadorSpriteInvertido = [assets[11], assets[12], assets[13]];
 	const alturaJogador = 4 + posicaoInvertida(estado)(estadoFinal.posicaoJogador.y) - tamanhoCanvas.y / 2 + estadoFinal.tamanhoJogador.y;
 	const estaInvertido = estadoFinal.modificacoes.invertido;
-	utilidades.desenharObstaculo(ctx)(estadoFinal.corAtual)((estadoFinal.modificacoes.invertido ? jogadorSpriteInvertido : jogadorSprite)[estadoFinal.spriteJogador])(estadoFinal.tamanhoJogador)(estaInvertido ? {...estadoFinal.posicaoJogador, y: alturaJogador < 100 ? 101 : alturaJogador} : {...estadoFinal.posicaoJogador, y: estadoFinal.posicaoJogador.y > 101 ? 99 : estadoFinal.posicaoJogador.y})(estadoFinal.modificacoes.invertido);
+	utilidades.desenharObstaculo(ctx)(estadoFinal.corAtual)((estadoFinal.modificacoes.invertido ? jogadorSpriteInvertido : jogadorSprite)[estadoFinal.spriteJogador])(estadoFinal.tamanhoJogador)(estaInvertido ? { ...estadoFinal.posicaoJogador, y: alturaJogador < 100 ? 101 : alturaJogador } : { ...estadoFinal.posicaoJogador, y: estadoFinal.posicaoJogador.y > 101 ? 99 : estadoFinal.posicaoJogador.y })(estadoFinal.modificacoes.invertido);
 
 	/* 	Aqui é definido o chão */
 	utilidades.desenharLinha(ctx)(estadoFinal.corAtual)(0)(tamanhoCanvas.x * window.devicePixelRatio)(tamanhoCanvas.y / 2)(tamanhoCanvas.y / 2)
 	/* 	Imprimir texto de pontuação */
-	utilidades.criarTexto(ctx)(16)(estadoFinal.corAtual)(`PONTUAÇÃO ${pontuacaoNormalizada}`)('right')({x: tamanhoCanvas.x * window.devicePixelRatio, y: 10})
+	utilidades.criarTexto(ctx)(16)(estadoFinal.corAtual)(`PONTUAÇÃO ${pontuacaoNormalizada}`)('right')({ x: tamanhoCanvas.x * window.devicePixelRatio, y: 10 })
 	return estadoFinal;
 };
 
@@ -758,14 +805,14 @@ const loopJogo = (estadoInicial) => (tempoAtual) => (assets) => (menu) => (fase)
 	os assets. Isso é necessário pois, caso o loop se inicie antes, as imagens
 	não serão exibidas */
 ((imagens) => (audios) => async () => {
-	const loadImage = (img) => new Promise((res, rej) => Object.assign((img), {onload(e) {res(this)}, onerror: rej}));
+	const loadImage = (img) => new Promise((res, rej) => Object.assign((img), { onload(e) { res(this) }, onerror: rej }));
 
 	/*	O jogo só deve ser iniciado após todas as imagens estejam carregadas */
 	const assetsImagens = await Promise.all(imagens.map(loadImage));
 
-	const loop = loopJogo(estado_)(tempoAtual)({imagem: assetsImagens, audio: audios});
+	const loop = loopJogo(estado_)(tempoAtual)({ imagem: assetsImagens, audio: audios });
 	const menu = () => criarMenu(ctx)(assetsImagens[0])(utilidades);
 	const fase = criarFase(ctx)(utilidades)(imagens);
 
 	return window.requestAnimationFrame(loop(menu)(fase));
-})(imagens)({perdeuAudio, audioPular, audioAmbiente, audioExplosao})();
+})(imagens)({ perdeuAudio, audioPular, audioAmbiente, audioExplosao })();
