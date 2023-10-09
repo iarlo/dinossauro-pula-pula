@@ -496,6 +496,9 @@ const criarFase = (ctx) => (utilidades) => (assets) => (estado) => {
 		Para isso, apenas usaremos substring para remover o último caractere do
 		texto */
 	const pontuacaoAtual = estado.pontuacaoAtual.toString();
+	const maiorPontuacao = JSON.parse(localStorage['maiorPontuacao']).toString();
+
+	const maiorPontuacaoNormalizada = maiorPontuacao.substring(0, maiorPontuacao.length - 1);
 	const pontuacaoNormalizada = pontuacaoAtual.substring(0, pontuacaoAtual.length - 1);
 
 	const habilidadeTimer = estado.habilidadeTimer.toString();
@@ -675,7 +678,7 @@ const criarFase = (ctx) => (utilidades) => (assets) => (estado) => {
 	/* 	Aqui é definido o chão */
 	utilidades.desenharLinha(ctx)(estadoFinal.corAtual)(0)(tamanhoCanvas.x * window.devicePixelRatio)(tamanhoCanvas.y / 2)(tamanhoCanvas.y / 2)
 	/* 	Imprimir texto de pontuação */
-	utilidades.criarTexto(ctx)(16)(estadoFinal.corAtual)(`PONTUAÇÃO ${pontuacaoNormalizada}`)('right')({ x: tamanhoCanvas.x * window.devicePixelRatio, y: 10 })
+	utilidades.criarTexto(ctx)(16)(estadoFinal.corAtual)(`MELHOR ${maiorPontuacaoNormalizada ? maiorPontuacaoNormalizada : 0} | PONTUAÇÃO ${pontuacaoNormalizada}`)('right')({ x: tamanhoCanvas.x * window.devicePixelRatio, y: 10 })
 	return estadoFinal;
 };
 
@@ -757,6 +760,8 @@ const loopJogo = (estadoInicial) => (tempoAtual) => (assets) => (menu) => (fase)
 	const tempoNovo = new Date();
 	const fps = 1000 / (tempoNovo - tempoAtual);
 
+	if (!localStorage['maiorPontuacao']) localStorage['maiorPontuacao'] = 0;
+
 	/* 	Se o jogador perder, a página é reiniciada */
 	if (estadoInicial.perdeu) {
 		if (estadoInicial.modificacoes.vidaExtra) {
@@ -769,6 +774,7 @@ const loopJogo = (estadoInicial) => (tempoAtual) => (assets) => (menu) => (fase)
 			assets.audio.audioAmbiente.pause();
 			assets.audio.perdeuAudio.play();
 			estadoInicial.pausado = true;
+			localStorage['maiorPontuacao'] = estadoInicial.pontuacaoAtual > JSON.parse(localStorage['maiorPontuacao']) ? estadoInicial.pontuacaoAtual : localStorage['maiorPontuacao'];
 			setTimeout(() => document.location.reload(), 1000);
 		}
 	}
